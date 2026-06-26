@@ -216,9 +216,9 @@
         assert(document.getElementById('mod-laporan').classList.contains('active'), "Tab Laporan Harian harus aktif");
 
         // Pindah ke JSA Log
-        switchTab('jsa-log');
+        switchTab('log');
         await sleep(150);
-        assert(document.getElementById('mod-jsa-log').classList.contains('active'), "Tab JSA Log harus aktif");
+        assert(document.getElementById('mod-log').classList.contains('active'), "Tab JSA Log harus aktif");
       }
     },
     {

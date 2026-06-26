@@ -889,6 +889,13 @@
 
           doc.save(filename);
           showToast("✓ PDF IBPPR berhasil diunduh");
+        } catch (err) {
+          console.error("[PDF] gagal membuat:", err);
+          showToast("⚠ Gagal membuat PDF, coba lagi");
+        } finally {
+          if (pdfBtn) pdfBtn.disabled = false;
+          if (pdfLabel) pdfLabel.textContent = "Download PDF";
+        }
       }
 
       // ---- Sheet: LAPORAN HARIAN (struktur tabel A4 Portrait) ----

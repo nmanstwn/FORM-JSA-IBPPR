@@ -1006,6 +1006,120 @@
           }
         }
 
+        function restore() {
+          const sess = load();
+          if (sess) {
+            // 1. Tab aktif
+            if (sess.activeTab) switchTab(sess.activeTab);
+            else switchTab("dashboard");
+
+            // 1b. Info dokumen (No. Dok / No. Rev / Tgl Terbit)
+            if (sess.docMeta) {
+              DOC_META = Object.assign({}, DOC_META, sess.docMeta);
+              docMetaDialog.renderTopbar();
+            }
+
+            // 2. IBPPR header fields
+            if (sess.ibpprHeader) {
+              Object.entries(sess.ibpprHeader).forEach(([f, v]) => {
+                const el = document.getElementById("ibppr-" + f);
+                if (el) el.value = v;
+              });
+            }
+
+            // 3. IBPPR baris (jika ada data tersimpan & berbeda dari dummy)
+            if (sess.ibpprBaris && sess.ibpprBaris.length) {
+              ibppr.setRows(sess.ibpprBaris);
+            }
+
+            // 4. JSA header fields
+            if (sess.jsaHeader) {
+              [
+                "noJSA",
+                "tanggal",
+                "jenisPekerjaan",
+                "pengawas",
+                "namaPelaksana",
+                "apdTambahan",
+                "lokasi",
+                "penanggungjawab",
+              ].forEach((f) => {
+                const el = document.getElementById("jsa-" + f);
+                if (el && sess.jsaHeader[f] !== undefined)
+                  el.value = sess.jsaHeader[f];
+              });
+              syncPelaksanaPreview();
+              const resEl = document.getElementById("jsa-resiko");
+              if (resEl && sess.jsaHeader.resiko !== undefined)
+                resEl.value = sess.jsaHeader.resiko;
+            }
+
+            // 5. APD checklist
+            if (sess.apdChecked && sess.apdChecked.length) {
+              APD_LIST.forEach((_, i) => {
+                const el = document.getElementById("apd-" + i);
+                if (el && sess.apdChecked[i] !== undefined)
+                  el.checked = sess.apdChecked[i];
+              });
+            }
+
+            // 6. JSA langkah
+            if (sess.jsaLangkah && sess.jsaLangkah.length) {
+              jsa.setSteps(sess.jsaLangkah);
+            }
+
+            // 6b. Laporan header fields
+            if (sess.laporanHeader) {
+              Object.entries(sess.laporanHeader).forEach(([f, v]) => {
+                const el = document.getElementById("laporan-" + f);
+                if (el) {
+                  el.value = v;
+                  if (f === "persenProgres") {
+                    const rangeEl = document.getElementById("laporan-persenProgres-range");
+                    if (rangeEl) rangeEl.value = v;
+                  }
+                }
+              });
+            }
+
+            // 7. JSA Log filter & search
+            if (sess.logSearch !== undefined) {
+              const el = document.getElementById("log-search");
+              if (el) {
+                el.value = sess.logSearch;
+              }
+            }
+            if (sess.logFilterResiko !== undefined) {
+              const el = document.getElementById("log-filter-resiko");
+              if (el) {
+                el.value = sess.logFilterResiko;
+              }
+            }
+            if (sess.logFilterTahun !== undefined) {
+              const el = document.getElementById("log-filter-tahun");
+              if (el) {
+                el.value = sess.logFilterTahun;
+              }
+            }
+            // re-apply filter jika ada
+            if (sess.logSearch || sess.logFilterResiko || sess.logFilterTahun) {
+              setTimeout(() => jsaLog.filter(), 100);
+            }
+
+            // 8. Restore scroll position
+            if (sess.scrollTop) {
+              setTimeout(() => {
+                const viewArea = document.querySelector(".view-area");
+                if (viewArea) viewArea.scrollTop = sess.scrollTop;
+              }, 200);
+            }
+
+            setTimeout(initTextareaHeights, 150);
+          } else {
+            switchTab("dashboard");
+          }
+        }
+
         // Pasang event listener: simpan tiap kali ada perubahan input di seluruh halaman
         function startAutoSave() {
           document.addEventListener("input", () => save(), { passive: true });
@@ -1018,7 +1132,7 @@
             });
         }
 
-        return { save, load, startAutoSave };
+        return { save, load, restore, startAutoSave };
       })();
 
       /* =========================================================================
@@ -1060,117 +1174,7 @@
         };
 
         // ── RESTORE SESSION ────────────────────────────────────────────────────────
-        const sess = session.load();
-        if (sess) {
-          // 1. Tab aktif
-          if (sess.activeTab) switchTab(sess.activeTab);
-          else switchTab("dashboard");
-
-          // 1b. Info dokumen (No. Dok / No. Rev / Tgl Terbit)
-          if (sess.docMeta) {
-            DOC_META = Object.assign({}, DOC_META, sess.docMeta);
-            docMetaDialog.renderTopbar();
-          }
-
-          // 2. IBPPR header fields
-          if (sess.ibpprHeader) {
-            Object.entries(sess.ibpprHeader).forEach(([f, v]) => {
-              const el = document.getElementById("ibppr-" + f);
-              if (el) el.value = v;
-            });
-          }
-
-          // 3. IBPPR baris (jika ada data tersimpan & berbeda dari dummy)
-          if (sess.ibpprBaris && sess.ibpprBaris.length) {
-            ibppr.setRows(sess.ibpprBaris);
-          }
-
-          // 4. JSA header fields
-          if (sess.jsaHeader) {
-            [
-              "noJSA",
-              "tanggal",
-              "jenisPekerjaan",
-              "pengawas",
-              "namaPelaksana",
-              "apdTambahan",
-              "lokasi",
-              "penanggungjawab",
-            ].forEach((f) => {
-              const el = document.getElementById("jsa-" + f);
-              if (el && sess.jsaHeader[f] !== undefined)
-                el.value = sess.jsaHeader[f];
-            });
-            syncPelaksanaPreview();
-            const resEl = document.getElementById("jsa-resiko");
-            if (resEl && sess.jsaHeader.resiko !== undefined)
-              resEl.value = sess.jsaHeader.resiko;
-          }
-
-          // 5. APD checklist
-          if (sess.apdChecked && sess.apdChecked.length) {
-            APD_LIST.forEach((_, i) => {
-              const el = document.getElementById("apd-" + i);
-              if (el && sess.apdChecked[i] !== undefined)
-                el.checked = sess.apdChecked[i];
-            });
-          }
-
-          // 6. JSA langkah
-          if (sess.jsaLangkah && sess.jsaLangkah.length) {
-            jsa.setSteps(sess.jsaLangkah);
-          }
-
-          // 6b. Laporan header fields
-          if (sess.laporanHeader) {
-            Object.entries(sess.laporanHeader).forEach(([f, v]) => {
-              const el = document.getElementById("laporan-" + f);
-              if (el) {
-                el.value = v;
-                if (f === "persenProgres") {
-                  const rangeEl = document.getElementById("laporan-persenProgres-range");
-                  if (rangeEl) rangeEl.value = v;
-                }
-              }
-            });
-          }
-
-          // 7. JSA Log filter & search
-          if (sess.logSearch !== undefined) {
-            const el = document.getElementById("log-search");
-            if (el) {
-              el.value = sess.logSearch;
-            }
-          }
-          if (sess.logFilterResiko !== undefined) {
-            const el = document.getElementById("log-filter-resiko");
-            if (el) {
-              el.value = sess.logFilterResiko;
-            }
-          }
-          if (sess.logFilterTahun !== undefined) {
-            const el = document.getElementById("log-filter-tahun");
-            if (el) {
-              el.value = sess.logFilterTahun;
-            }
-          }
-          // re-apply filter jika ada
-          if (sess.logSearch || sess.logFilterResiko || sess.logFilterTahun) {
-            setTimeout(() => jsaLog.filter(), 100);
-          }
-
-          // 8. Restore scroll position
-          if (sess.scrollTop) {
-            setTimeout(() => {
-              const viewArea = document.querySelector(".view-area");
-              if (viewArea) viewArea.scrollTop = sess.scrollTop;
-            }, 200);
-          }
-
-          setTimeout(initTextareaHeights, 150);
-        } else {
-          switchTab("dashboard");
-        }
+        session.restore();
 
         // Mulai auto-save setelah restore selesai
         setTimeout(() => {
