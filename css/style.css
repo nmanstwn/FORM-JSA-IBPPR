@@ -684,3 +684,76 @@
         stroke: var(--amber-glow);
         flex-shrink: 0;
       }
+
+/* -- Responsif Ponsel untuk Topbar Header -- */
+@media (max-width: 600px) {
+  .topbar {
+    padding: 0 10px;
+  }
+  .topbar .brand {
+    gap: 8px;
+  }
+  .topbar .brand-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+  }
+  .topbar .brand-mark img {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  .topbar .brand-text strong {
+    font-size: 13.5px;
+  }
+  .topbar .brand-text span {
+    display: none; /* Sembunyikan sub-judul panjang di mobile */
+  }
+  .topbar .btn-text {
+    display: none; /* Sembunyikan teks 'Muat Draft' di mobile */
+  }
+  .topbar button {
+    padding: 6px 8px !important;
+    gap: 0 !important;
+  }
+  .topbar .doc-meta {
+    font-size: 9.5px;
+    padding: 5px 8px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    text-align: center;
+  }
+  .topbar .doc-meta br {
+    display: none; /* Jadikan satu baris di mobile */
+  }
+  .topbar .doc-meta #topbar-doc-meta-line2 {
+    display: none; /* Sembunyikan baris revisi & tanggal di mobile agar hemat tempat */
+  }
+  .topbar .doc-meta #topbar-doc-meta-line1 {
+    display: inline-block;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+  .topbar .doc-meta::before {
+    content: "📄 ";
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 360px) {
+  .topbar .brand-text strong {
+    font-size: 12px;
+  }
+  .topbar .doc-meta #topbar-doc-meta-line1 {
+    max-width: 60px;
+  }
+  #sync-text {
+    display: none; /* Sembunyikan tulisan 'Terhubung' di screen super sempit, sisakan dot */
+  }
+  #sync-indicator {
+    padding: 6px !important;
+  }
+}
