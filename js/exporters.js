@@ -889,9 +889,338 @@
 
           doc.save(filename);
           showToast("✓ PDF IBPPR berhasil diunduh");
+      }
+
+      // ---- Sheet: LAPORAN HARIAN (struktur tabel A4 Portrait) ----
+      function buildLaporanSheet(val) {
+        return `
+        <table>
+          <colgroup>
+            <col style="width:150px"><col style="width:250px">
+            <col style="width:150px"><col style="width:244px">
+          </colgroup>
+          <thead>
+          <tr class="rh">
+            <td style="padding:2px;">
+              <img src="${LOGO_KIRI}" style="max-width:100%;max-height:50px;width:auto;height:auto;display:block;margin:0 auto;">
+            </td>
+            <td colspan="2" class="big">LAPORAN HARIAN PROYEK</td>
+            <td class="l" style="font-size:9px;"><b>No. Dok:</b> ${DOC_META.noDok}<br><b>No. Rev:</b> ${DOC_META.noRev}<br><b>Tgl Terbit:</b> ${DOC_META.tglTerbit}</td>
+          </tr>
+          </thead>
+          <tbody>
+          <tr>
+            <td class="b l">No. Laporan</td>
+            <td class="l">${escHTML(val.noLaporan)}</td>
+            <td class="b l">Tanggal</td>
+            <td class="l">${val.tanggal ? fmtDate(val.tanggal) : ""}</td>
+          </tr>
+          <tr>
+            <td class="b l">Nama Pengawas</td>
+            <td class="l">${escHTML(val.pengawas)}</td>
+            <td class="b l">Lokasi Pekerjaan</td>
+            <td class="l">${escHTML(val.lokasi)}</td>
+          </tr>
+          <tr>
+            <td class="b l">Kondisi Cuaca</td>
+            <td class="l">${escHTML(val.cuaca)}</td>
+            <td class="b l">Jam Kerja / Shift</td>
+            <td class="l">${escHTML(val.jamMulai)} s/d ${escHTML(val.jamSelesai)} WIB</td>
+          </tr>
+          <tr>
+            <td class="b l">Jumlah Tenaga Kerja</td>
+            <td class="l" colspan="3">${escHTML(val.jumlahPekerja)} Orang</td>
+          </tr>
+          
+          <tr style="background:#f3f4f6"><td colspan="4" class="b l big" style="text-align:left;height:24px">Detail Aktivitas &amp; Progres</td></tr>
+          <tr>
+            <td class="b l top">Deskripsi Aktivitas Hari Ini</td>
+            <td class="l top" colspan="3" style="min-height:80px;text-align:left">${escHTML(val.deskripsiPekerjaan)}</td>
+          </tr>
+          <tr>
+            <td class="b l">Persentase Progres Kerja</td>
+            <td class="l" colspan="3"><b>${escHTML(val.persenProgres)}%</b></td>
+          </tr>
+
+          <tr style="background:#f3f4f6"><td colspan="4" class="b l big" style="text-align:left;height:24px">Aspek Keselamatan Kerja (K3)</td></tr>
+          <tr>
+            <td class="b l top">Temuan Bahaya (Unsafe Act/Condition)</td>
+            <td class="l top" colspan="3" style="min-height:50px;text-align:left">${escHTML(val.temuanK3 || "-")}</td>
+          </tr>
+          <tr>
+            <td class="b l top">Tindakan Koreksi Langsung</td>
+            <td class="l top" colspan="3" style="min-height:50px;text-align:left">${escHTML(val.tindakanKoreksi || "-")}</td>
+          </tr>
+
+          <tr style="background:#f3f4f6"><td colspan="4" class="b l big" style="text-align:left;height:24px">Logistik &amp; Sumber Daya</td></tr>
+          <tr>
+            <td class="b l top">Alat/Mesin Utama yang Digunakan</td>
+            <td class="l top" colspan="3" style="min-height:40px;text-align:left">${escHTML(val.alat || "-")}</td>
+          </tr>
+          <tr>
+            <td class="b l top">Material Utama yang Digunakan</td>
+            <td class="l top" colspan="3" style="min-height:40px;text-align:left">${escHTML(val.material || "-")}</td>
+          </tr>
+          
+          <tr class="ttd-label"><td colspan="2">Dibuat Oleh:</td><td colspan="2">Diketahui Oleh:</td></tr>
+          <tr class="ttd-space"><td colspan="2"></td><td colspan="2"></td></tr>
+          <tr class="ttd-name"><td colspan="2">${escHTML(val.pengawas)}</td><td colspan="2">Penanggung Jawab K3</td></tr>
+          <tr class="ttd-jabatan"><td colspan="2">Pengawas Lapangan</td><td colspan="2">Pimpinan Unit / HSE</td></tr>
+          </tbody>
+        </table>`;
+      }
+
+      async function exportLaporanPDF(payload, filename) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ compress: true,
+          orientation: "portrait",
+          unit: "mm",
+          format: "a4",
+        });
+
+        const marginL = 10;
+        const marginR = 10;
+        const pageW = 210;
+        const tableW = pageW - marginL - marginR; // 190 mm
+
+        const borderStyle = { lineColor: [0, 0, 0], lineWidth: 0.3 };
+        const baseStyle = {
+          ...borderStyle,
+          fillColor: [255, 255, 255],
+          textColor: [0, 0, 0],
+          fontSize: 8.5,
+          cellPadding: 2.5,
+          font: "helvetica",
+        };
+
+        const pdfBtn = document.getElementById("gen-btn-pdf");
+        const pdfLabel = document.getElementById("gen-btn-pdf-label");
+        if (pdfBtn) pdfBtn.disabled = true;
+        if (pdfLabel) pdfLabel.textContent = "Membuat PDF…";
+
+        try {
+          const logoB64 = await loadImageBase64("logo.png");
+          const smk3B64 = await loadImageBase64("smk3.png");
+
+          // ── 1. HEADER TABLE ──
+          const colLogo = 22;
+          const colSMK3 = 22;
+          const colLabel = 25;
+          const colVal = 30;
+          const colJudul = tableW - colLogo - colSMK3 - colLabel - colVal; // 190 - 22 - 22 - 25 - 30 = 91 mm
+
+          doc.autoTable({
+            startY: 10,
+            margin: { left: marginL, right: marginR },
+            tableWidth: tableW,
+            body: [
+              [
+                { content: "", rowSpan: 3, styles: { cellWidth: colLogo, minCellHeight: 20 } },
+                {
+                  content: "LAPORAN HARIAN PROYEK",
+                  rowSpan: 3,
+                  styles: {
+                    cellWidth: colJudul,
+                    halign: "center",
+                    valign: "middle",
+                    fontStyle: "bold",
+                    fontSize: 11,
+                  },
+                },
+                { content: "", rowSpan: 3, styles: { cellWidth: colSMK3, minCellHeight: 20 } },
+                { content: "No. Dok", styles: { cellWidth: colLabel, fontStyle: "bold" } },
+                { content: DOC_META.noDok, styles: { cellWidth: colVal } },
+              ],
+              [
+                { content: "No. Rev", styles: { fontStyle: "bold" } },
+                { content: DOC_META.noRev },
+              ],
+              [
+                { content: "Tgl Terbit", styles: { fontStyle: "bold" } },
+                { content: DOC_META.tglTerbit },
+              ],
+            ],
+            styles: { ...baseStyle },
+            theme: "grid",
+            didDrawCell(data) {
+              if (data.row.index === 0 && data.column.index === 0 && logoB64) {
+                const s = 14;
+                doc.addImage(
+                  logoB64,
+                  "PNG",
+                  data.cell.x + (data.cell.width - s) / 2,
+                  data.cell.y + (data.cell.height - s) / 2,
+                  s,
+                  s
+                );
+              }
+              if (data.row.index === 0 && data.column.index === 2 && smk3B64) {
+                const s = 14;
+                doc.addImage(
+                  smk3B64,
+                  "PNG",
+                  data.cell.x + (data.cell.width - s) / 2,
+                  data.cell.y + (data.cell.height - s) / 2,
+                  s,
+                  s
+                );
+              }
+            },
+          });
+
+          // ── 2. INFORMASI UMUM ──
+          doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 4,
+            margin: { left: marginL, right: marginR },
+            tableWidth: tableW,
+            body: [
+              [
+                { content: "No. Laporan", styles: { fontStyle: "bold", cellWidth: 40 } },
+                { content: payload.noLaporan || "-" },
+                { content: "Tanggal", styles: { fontStyle: "bold", cellWidth: 40 } },
+                { content: payload.tanggal ? fmtDate(payload.tanggal) : "-" },
+              ],
+              [
+                { content: "Nama Pengawas", styles: { fontStyle: "bold" } },
+                { content: payload.pengawas || "-" },
+                { content: "Lokasi Pekerjaan", styles: { fontStyle: "bold" } },
+                { content: payload.lokasi || "-" },
+              ],
+              [
+                { content: "Kondisi Cuaca", styles: { fontStyle: "bold" } },
+                { content: payload.cuaca || "Cerah" },
+                { content: "Jam Kerja", styles: { fontStyle: "bold" } },
+                { content: (payload.jamMulai || "08:00") + " s/d " + (payload.jamSelesai || "17:00") + " WIB" },
+              ],
+              [
+                { content: "Jumlah Tenaga Kerja", styles: { fontStyle: "bold" } },
+                { content: (payload.jumlahPekerja || "0") + " Orang", colspan: 3 },
+              ],
+            ],
+            styles: { ...baseStyle },
+            theme: "grid",
+          });
+
+          // ── 3. DETAIL AKTIVITAS & PROGRES ──
+          doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 4,
+            margin: { left: marginL, right: marginR },
+            tableWidth: tableW,
+            body: [
+              [
+                {
+                  content: "DETAIL AKTIVITAS & PROGRES KERJA",
+                  colspan: 2,
+                  styles: { fontStyle: "bold", fillColor: [240, 240, 240] },
+                },
+              ],
+              [
+                { content: "Deskripsi Aktivitas Hari Ini", styles: { fontStyle: "bold", cellWidth: 50 } },
+                { content: payload.deskripsiPekerjaan || "-", styles: { halign: "left" } },
+              ],
+              [
+                { content: "Persentase Progres Kerja", styles: { fontStyle: "bold" } },
+                { content: (payload.persenProgres || "0") + " %", styles: { fontStyle: "bold" } },
+              ],
+            ],
+            styles: { ...baseStyle },
+            theme: "grid",
+          });
+
+          // ── 4. ASPEK KESELAMATAN KERJA (K3) ──
+          doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 4,
+            margin: { left: marginL, right: marginR },
+            tableWidth: tableW,
+            body: [
+              [
+                {
+                  content: "ASPEK KESELAMATAN & KESEHATAN KERJA (K3)",
+                  colspan: 2,
+                  styles: { fontStyle: "bold", fillColor: [240, 240, 240] },
+                },
+              ],
+              [
+                { content: "Temuan Bahaya (Unsafe Act/Condition)", styles: { fontStyle: "bold", cellWidth: 50 } },
+                { content: payload.temuanK3 || "-", styles: { halign: "left" } },
+              ],
+              [
+                { content: "Tindakan Koreksi Langsung", styles: { fontStyle: "bold" } },
+                { content: payload.tindakanKoreksi || "-", styles: { halign: "left" } },
+              ],
+            ],
+            styles: { ...baseStyle },
+            theme: "grid",
+          });
+
+          // ── 5. LOGISTIK & SUMBER DAYA ──
+          doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 4,
+            margin: { left: marginL, right: marginR },
+            tableWidth: tableW,
+            body: [
+              [
+                {
+                  content: "LOGISTIK & SUMBER DAYA",
+                  colspan: 2,
+                  styles: { fontStyle: "bold", fillColor: [240, 240, 240] },
+                },
+              ],
+              [
+                { content: "Alat/Mesin Utama yang Digunakan", styles: { fontStyle: "bold", cellWidth: 50 } },
+                { content: payload.alat || "-", styles: { halign: "left" } },
+              ],
+              [
+                { content: "Material Utama yang Digunakan", styles: { fontStyle: "bold" } },
+                { content: payload.material || "-", styles: { halign: "left" } },
+              ],
+            ],
+            styles: { ...baseStyle },
+            theme: "grid",
+          });
+
+          // ── 6. SIGN-OFF TTD TABLE ──
+          const colTTD = tableW / 2; // 95 mm
+          doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 6,
+            margin: { left: marginL, right: marginR },
+            tableWidth: tableW,
+            body: [
+              [
+                { content: "Dibuat Oleh:", styles: { halign: "center", fontStyle: "bold" } },
+                { content: "Diketahui Oleh:", styles: { halign: "center", fontStyle: "bold" } },
+              ],
+              [
+                { content: "", styles: { minCellHeight: 18 } },
+                { content: "", styles: { minCellHeight: 18 } },
+              ],
+              [
+                {
+                  content: payload.pengawas || "Pengawas Lapangan",
+                  styles: { halign: "center", fontStyle: "bold", textDecoration: "underline" },
+                },
+                {
+                  content: "Penanggung Jawab K3 / HSE",
+                  styles: { halign: "center", fontStyle: "bold", textDecoration: "underline" },
+                },
+              ],
+              [
+                { content: "Pengawas Lapangan", styles: { halign: "center", fontSize: 7.5 } },
+                { content: "Pimpinan Unit / HSE", styles: { halign: "center", fontSize: 7.5 } },
+              ],
+            ],
+            styles: { ...baseStyle },
+            columnStyles: {
+              0: { cellWidth: colTTD },
+              1: { cellWidth: colTTD },
+            },
+            theme: "grid",
+          });
+
+          doc.save(filename);
         } catch (err) {
-          console.error("[PDF] gagal membuat:", err);
-          showToast("⚠ Gagal membuat PDF, coba lagi");
+          console.error("[PDF] gagal membuat laporan harian:", err);
+          showToast("⚠ Gagal membuat PDF Laporan Harian");
         } finally {
           if (pdfBtn) pdfBtn.disabled = false;
           if (pdfLabel) pdfLabel.textContent = "Download PDF";

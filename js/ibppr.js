@@ -239,9 +239,14 @@
               showToast("⚠ No. Form dan Nama Pekerjaan wajib diisi");
               return;
             }
-            // --- INTEGRASI GAS: uncomment blok ini ---
-            // await submitToAppsScript(GAS_URL, payload);
-            // -----------------------------------------
+            // Increment local success count
+            try {
+              const current = parseInt(localStorage.getItem("sk_ibppr_success_count")) || 0;
+              localStorage.setItem("sk_ibppr_success_count", current + 1);
+            } catch (e) {}
+            if (typeof updateDashboardStats === "function") {
+              updateDashboardStats();
+            }
             showToast("✓ IBPPR berhasil disimpan (simulasi)");
           },
         };

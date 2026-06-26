@@ -71,116 +71,707 @@ window.onerror = function(msg, url, line, col, error) {
      APP SHELL
      ========================================================================= -->
     <div class="app-shell">
-      <!-- TOP BAR -->
-      <header class="topbar">
-        <div class="brand">
-          <div class="brand-mark">
-            <img
-              src="logo.png"
-              alt="Logo"
-              style="width: 24px; height: 24px; object-fit: contain"
-            />
-          </div>
+      <!-- SIDEBAR NAVIGASI KIRI -->
+      <aside class="sidebar" id="app-sidebar">
+        <div class="sidebar-brand">
+          <img src="logo.png" alt="Logo" />
           <div class="brand-text">
             <strong>HMJ-AUTOMATIC</strong>
-            <span>Sistem Identifikasi &amp; Keselamatan Kerja</span>
+            <span>Portal K3 SiKerja</span>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px">
-          <!-- Indikator Sinkronisasi -->
-          <div
-            id="sync-indicator"
-            role="button"
-            tabindex="0"
-            style="
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              font-family: var(--font-body);
-              font-size: 10px;
-              font-weight: 700;
-              color: rgba(255, 255, 255, 0.7);
-              background: rgba(255, 255, 255, 0.08);
-              padding: 6px 9px;
-              border-radius: 8px;
-              border: 1px solid rgba(255, 255, 255, 0.12);
-              cursor: pointer;
-              transition: background 0.2s, border-color 0.2s;
-            "
-            onclick="syncManager.showSyncModal()"
-            title="Klik untuk melihat detail antrean data offline"
-          >
-            <span
-              id="sync-dot"
-              style="
-                width: 6px;
-                height: 6px;
-                border-radius: 50%;
-                background: #4caf50;
-                display: inline-block;
-                transition: background 0.3s;
-              "
-            ></span>
-            <span id="sync-text">Terhubung</span>
-          </div>
+        <nav class="sidebar-nav" role="tablist" aria-label="Menu Modul SiKerja">
           <button
-            onclick="document.getElementById('draft-file-input').click()"
-            style="
-              background: rgba(255, 255, 255, 0.12);
-              border: 1px solid rgba(255, 255, 255, 0.2);
-              border-radius: 8px;
-              padding: 6px 11px;
-              color: #fff;
-              font-family: var(--font-body);
-              font-size: 12px;
-              font-weight: 600;
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              gap: 6px;
-              white-space: nowrap;
-            "
-            title="Upload file JSON draft untuk mengisi form otomatis"
+            class="tab-btn is-active"
+            onclick="switchTab('dashboard'); closeSidebar();"
+            id="tab-dashboard"
+            role="tab"
+            aria-selected="true"
+            aria-controls="mod-dashboard"
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              style="width: 14px; height: 14px"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            <span class="btn-text">Muat Draft</span>
+            <div class="tab-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+            </div>
+            <span class="tab-label">Dashboard</span>
           </button>
-          <div
-            class="doc-meta"
-            id="topbar-doc-meta"
-            onclick="docMetaDialog.open()"
-            role="button"
-            tabindex="0"
-            title="Ketuk untuk ubah No. Dok / No. Rev / Tgl Terbit"
+          <button
+            class="tab-btn"
+            onclick="switchTab('ibppr'); closeSidebar();"
+            id="tab-ibppr"
+            role="tab"
+            aria-selected="false"
+            aria-controls="mod-ibppr"
           >
-            <span id="topbar-doc-meta-line1">FR/PK3/JSA/002</span><br /><span
-              id="topbar-doc-meta-line2"
-              >Rev.0 · 10 MEI 2022</span
+            <div class="tab-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M9 11l3 3L22 4" />
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+              </svg>
+            </div>
+            <span class="tab-label">IBPPR Form</span>
+          </button>
+          <button
+            class="tab-btn"
+            onclick="switchTab('jsa'); closeSidebar();"
+            id="tab-jsa"
+            role="tab"
+            aria-selected="false"
+            aria-controls="mod-jsa"
+          >
+            <div class="tab-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <span class="tab-label">JSA Form</span>
+          </button>
+          <button
+            class="tab-btn"
+            onclick="switchTab('laporan'); closeSidebar();"
+            id="tab-laporan"
+            role="tab"
+            aria-selected="false"
+            aria-controls="mod-laporan"
+          >
+            <div class="tab-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            </div>
+            <span class="tab-label">Laporan Harian</span>
+          </button>
+          <button
+            class="tab-btn"
+            onclick="switchTab('log'); closeSidebar();"
+            id="tab-log"
+            role="tab"
+            aria-selected="false"
+            aria-controls="mod-log"
+          >
+            <div class="tab-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+            </div>
+            <span class="tab-label">JSA Log</span>
+          </button>
+        </nav>
+      </aside>
+
+      <!-- OVERLAY SIDEBAR MOBILE -->
+      <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+      <div class="main-container">
+        <!-- TOP BAR -->
+        <header class="topbar">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Buka Menu Samping">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <div class="brand">
+              <div class="brand-mark">
+                <img
+                  src="logo.png"
+                  alt="Logo"
+                  style="width: 24px; height: 24px; object-fit: contain"
+                />
+              </div>
+              <div class="brand-text">
+                <strong>HMJ-AUTOMATIC</strong>
+                <span>Sistem Identifikasi &amp; Keselamatan Kerja</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <!-- Indikator Sinkronisasi -->
+            <div
+              id="sync-indicator"
+              role="button"
+              tabindex="0"
+              style="
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-family: var(--font-body);
+                font-size: 10px;
+                font-weight: 700;
+                color: rgba(255, 255, 255, 0.7);
+                background: rgba(255, 255, 255, 0.08);
+                padding: 6px 9px;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                cursor: pointer;
+                transition: background 0.2s, border-color 0.2s;
+              "
+              onclick="syncManager.showSyncModal()"
+              title="Klik untuk melihat detail antrean data offline"
             >
+              <span
+                id="sync-dot"
+                style="
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 50%;
+                  background: #4caf50;
+                  display: inline-block;
+                  transition: background 0.3s;
+                "
+              ></span>
+              <span id="sync-text">Terhubung</span>
+            </div>
+            <button
+              onclick="document.getElementById('draft-file-input').click()"
+              style="
+                background: rgba(255, 255, 255, 0.12);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                padding: 6px 11px;
+                color: #fff;
+                font-family: var(--font-body);
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                white-space: nowrap;
+              "
+              title="Upload file JSON draft untuk mengisi form otomatis"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                style="width: 14px; height: 14px"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <span class="btn-text">Muat Draft</span>
+            </button>
+            <div
+              class="doc-meta"
+              id="topbar-doc-meta"
+              onclick="docMetaDialog.open()"
+              role="button"
+              tabindex="0"
+              title="Ketuk untuk ubah No. Dok / No. Rev / Tgl Terbit"
+            >
+              <span id="topbar-doc-meta-line1">FR/PK3/JSA/002</span><br /><span
+                id="topbar-doc-meta-line2"
+                >Rev.0 · 10 MEI 2022</span
+              >
+            </div>
+          </div>
+        </header>
+
+        <!-- AREA KONTEN UTAMA -->
+        <main class="view-area">
           </div>
         </div>
-      </header>
+        <nav class="sidebar-nav" role="tablist" aria-label="Menu Modul SiKerja">
+          <button
+            class="tab-btn is-active"
+            onclick="switchTab('dashboard'); closeSidebar();"
+            id="tab-dashboard"
+            role="tab"
+            aria-selected="true"
+            aria-controls="mod-dashboard"
+          >
+            <div class="tab-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+            </div>
+            <span class="tab-label">Dashboard</span>
+          </button>
+          <button
+            class="tab-btn"
+            onclick="switchTab('ibppr'); closeSidebar();"
+            id="tab-ibppr"
+            role="tab"
+            aria-selected="false"
+            aria-controls="mod-ibppr"
+          >
+            <div class="tab-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M9 11l3 3L22 4" />
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+              </svg>
+            </div>
+            <span class="tab-label">IBPPR Form</span>
+          </button>
+          <button
+            class="tab-btn"
+            onclick="switchTab('jsa'); closeSidebar();"
+            id="tab-jsa"
+            role="tab"
+            aria-selected="false"
+            aria-controls="mod-jsa"
+          >
+            <div class="tab-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <span class="tab-label">JSA Form</span>
+          </button>
+          <button
+            class="tab-btn"
+            onclick="switchTab('laporan'); closeSidebar();"
+            id="tab-laporan"
+            role="tab"
+            aria-selected="false"
+            aria-controls="mod-laporan"
+          >
+            <div class="tab-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            </div>
+            <span class="tab-label">Laporan Harian</span>
+          </button>
+          <button
+            class="tab-btn"
+            onclick="switchTab('log'); closeSidebar();"
+            id="tab-log"
+            role="tab"
+            aria-selected="false"
+            aria-controls="mod-log"
+          >
+            <div class="tab-ic">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+            </div>
+            <span class="tab-label">JSA Log</span>
+          </button>
+        </nav>
+      </aside>
 
-      <!-- AREA KONTEN UTAMA -->
-      <main class="view-area">
+      <!-- OVERLAY SIDEBAR MOBILE -->
+      <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+      <div class="main-container">
+        <!-- TOP BAR -->
+        <header class="topbar">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Buka Menu Samping">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </button>
+            <div class="brand">
+              <div class="brand-mark">
+                <img
+                  src="logo.png"
+                  alt="Logo"
+                  style="width: 24px; height: 24px; object-fit: contain"
+                />
+              </div>
+              <div class="brand-text">
+                <strong>HMJ-AUTOMATIC</strong>
+                <span>Sistem Identifikasi &amp; Keselamatan Kerja</span>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px">
+            <!-- Indikator Sinkronisasi -->
+            <div
+              id="sync-indicator"
+              role="button"
+              tabindex="0"
+              style="
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-family: var(--font-body);
+                font-size: 10px;
+                font-weight: 700;
+                color: rgba(255, 255, 255, 0.7);
+                background: rgba(255, 255, 255, 0.08);
+                padding: 6px 9px;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                cursor: pointer;
+                transition: background 0.2s, border-color 0.2s;
+              "
+              onclick="syncManager.showSyncModal()"
+              title="Klik untuk melihat detail antrean data offline"
+            >
+              <span
+                id="sync-dot"
+                style="
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 50%;
+                  background: #4caf50;
+                  display: inline-block;
+                  transition: background 0.3s;
+                "
+              ></span>
+              <span id="sync-text">Terhubung</span>
+            </div>
+            <button
+              onclick="document.getElementById('draft-file-input').click()"
+              style="
+                background: rgba(255, 255, 255, 0.12);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                padding: 6px 11px;
+                color: #fff;
+                font-family: var(--font-body);
+                font-size: 12px;
+                font-weight: 600;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                white-space: nowrap;
+              "
+              title="Upload file JSON draft untuk mengisi form otomatis"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                style="width: 14px; height: 14px"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              <span class="btn-text">Muat Draft</span>
+            </button>
+            <div
+              class="doc-meta"
+              id="topbar-doc-meta"
+              onclick="docMetaDialog.open()"
+              role="button"
+              tabindex="0"
+              title="Ketuk untuk ubah No. Dok / No. Rev / Tgl Terbit"
+            >
+              <span id="topbar-doc-meta-line1">FR/PK3/JSA/002</span><br /><span
+                id="topbar-doc-meta-line2"
+                >Rev.0 · 10 MEI 2022</span
+              >
+            </div>
+          </div>
+        </header>
+
+        <!-- AREA KONTEN UTAMA -->
+        <main class="view-area">
         <!-- ===================================================================
          MODUL 1: IBPPR
          (Form Identifikasi Bahaya, Penilaian, Pengendalian Resiko)
          Berdiri sendiri, tidak terhubung ke JSA.
          Field dipetakan ke kolom sheet "IBPPR" pada file Excel.
          =================================================================== -->
-        <section id="mod-ibppr" class="module active" role="tabpanel" aria-labelledby="tab-ibppr" tabindex="0">
+        <!-- ===================================================================
+         MODUL 4: LAPORAN HARIAN
+         =================================================================== -->
+        <section id="mod-laporan" class="module" role="tabpanel" aria-labelledby="tab-laporan" tabindex="0">
+          <div class="section-head">
+            <div class="eyebrow">Modul Baru</div>
+            <h1>Laporan Harian Proyek</h1>
+            <p class="desc">
+              Catatan aktivitas harian, tenaga kerja, penggunaan material, dan temuan K3 di lapangan.
+            </p>
+          </div>
+
+          <!-- 1. Informasi Umum -->
+          <div class="card">
+            <div class="card-title-row">
+              <h3>
+                <div class="num-chip">1</div>
+                Informasi Umum Laporan
+              </h3>
+            </div>
+            <div class="field-grid cols-2">
+              <div class="field">
+                <label for="laporan-noLaporan">No. Laporan <span class="req">*</span></label>
+                <input type="text" id="laporan-noLaporan" placeholder="Contoh: LH/2026/06/001" required />
+              </div>
+              <div class="field">
+                <label for="laporan-tanggal">Tanggal <span class="req">*</span></label>
+                <input type="date" id="laporan-tanggal" required />
+              </div>
+            </div>
+            <div class="field-grid cols-2" style="margin-top:12px">
+              <div class="field">
+                <label for="laporan-pengawas">Nama Pengawas <span class="req">*</span></label>
+                <input type="text" id="laporan-pengawas" placeholder="Nama lengkap pengawas lapangan" required />
+              </div>
+              <div class="field">
+                <label for="laporan-lokasi">Lokasi Pekerjaan <span class="req">*</span></label>
+                <input type="text" id="laporan-lokasi" placeholder="Area / Lokasi proyek" required />
+              </div>
+            </div>
+            <div class="field" style="margin-top:12px">
+              <label for="laporan-cuaca">Kondisi Cuaca</label>
+              <select id="laporan-cuaca">
+                <option value="Cerah">Cerah / Normal</option>
+                <option value="Berawan">Berawan</option>
+                <option value="Mendung">Mendung</option>
+                <option value="Hujan">Hujan</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- 2. Tenaga Kerja & Jam Kerja -->
+          <div class="card" style="border-top-color: var(--steel)">
+            <div class="card-title-row">
+              <h3>
+                <div class="num-chip">2</div>
+                Tenaga Kerja &amp; Waktu Kerja
+              </h3>
+            </div>
+            <div class="field-grid cols-2">
+              <div class="field">
+                <label for="laporan-jumlahPekerja">Jumlah Tenaga Kerja (Orang) <span class="req">*</span></label>
+                <input type="number" id="laporan-jumlahPekerja" placeholder="0" min="0" required />
+              </div>
+              <div class="field">
+                <label>Jam Kerja (WIB) <span class="req">*</span></label>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <input type="time" id="laporan-jamMulai" value="08:00" required style="flex:1" />
+                  <span style="color:var(--ink-soft);font-weight:600">s/d</span>
+                  <input type="time" id="laporan-jamSelesai" value="17:00" required style="flex:1" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Deskripsi Pekerjaan & Progres -->
+          <div class="card" style="border-top-color: var(--amber-deep)">
+            <div class="card-title-row">
+              <h3>
+                <div class="num-chip">3</div>
+                Detail Pekerjaan &amp; Kemajuan Proyek
+              </h3>
+            </div>
+            <div class="field">
+              <label for="laporan-deskripsiPekerjaan">Deskripsi Aktivitas Hari Ini <span class="req">*</span></label>
+              <textarea id="laporan-deskripsiPekerjaan" placeholder="Tuliskan detail pekerjaan yang dilakukan hari ini..." required style="min-height:80px"></textarea>
+            </div>
+            <div class="field" style="margin-top:12px">
+              <label for="laporan-persenProgres">Persentase Progres Kerja (%) <span class="req">*</span></label>
+              <div style="display:flex;align-items:center;gap:12px">
+                <input type="range" id="laporan-persenProgres-range" min="0" max="100" value="0" style="flex:1;accent-color:var(--steel)" oninput="document.getElementById('laporan-persenProgres').value = this.value" />
+                <input type="number" id="laporan-persenProgres" min="0" max="100" value="0" style="width:70px;text-align:center" oninput="document.getElementById('laporan-persenProgres-range').value = this.value" required />
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Keselamatan Kerja (K3) -->
+          <div class="card" style="border-top-color: var(--risk-high)">
+            <div class="card-title-row">
+              <h3>
+                <div class="num-chip">4</div>
+                Aspek Keselamatan Kerja (K3)
+              </h3>
+            </div>
+            <div class="field">
+              <label for="laporan-temuanK3">Temuan Bahaya (Unsafe Act / Unsafe Condition)</label>
+              <textarea id="laporan-temuanK3" placeholder="Tuliskan temuan tindakan tidak aman atau kondisi tidak aman jika ada..." style="min-height:60px"></textarea>
+            </div>
+            <div class="field" style="margin-top:12px">
+              <label for="laporan-tindakanKoreksi">Tindakan Koreksi Langsung</label>
+              <textarea id="laporan-tindakanKoreksi" placeholder="Tindakan perbaikan langsung yang dilakukan saat itu juga..." style="min-height:60px"></textarea>
+            </div>
+          </div>
+
+          <!-- 5. Logistik (Sumber Daya) -->
+          <div class="card" style="border-top-color: var(--steel)">
+            <div class="card-title-row">
+              <h3>
+                <div class="num-chip">5</div>
+                Logistik &amp; Sumber Daya yang Digunakan
+              </h3>
+            </div>
+            <div class="field-grid cols-2">
+              <div class="field">
+                <label for="laporan-alat">Alat/Mesin Utama yang Digunakan</label>
+                <textarea id="laporan-alat" placeholder="Contoh: Excavator, Las Listrik, Handtools" style="min-height:60px"></textarea>
+              </div>
+              <div class="field">
+                <label for="laporan-material">Material Utama yang Digunakan</label>
+                <textarea id="laporan-material" placeholder="Contoh: Semen, Baja Profil, Pipa 4 inch" style="min-height:60px"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tombol Aksi Laporan -->
+          <div style="margin-top:20px;display:flex;flex-direction:column;gap:12px;margin-bottom:30px">
+            <div class="fab-row">
+              <button class="btn btn-primary" onclick="laporan.submit()" style="flex:1" title="Kirim Laporan Harian ke database online">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                Kirim &amp; Simpan Laporan
+              </button>
+              <button class="btn btn-ghost" onclick="laporan.downloadPDF()" title="Cetak dokumen PDF Laporan Harian">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                PDF
+              </button>
+            </div>
+            <div class="fab-row" style="margin-top:0">
+              <button class="btn btn-ghost" onclick="laporan.saveDraft()" style="flex:1" title="Simpan draft data Laporan ke file JSON local">
+                Simpan Draft
+              </button>
+              <button class="btn btn-ghost" onclick="document.getElementById('draft-file-input').click()" style="flex:1" title="Muat draft data Laporan dari file JSON">
+                Muat Draft
+              </button>
+              <button class="btn btn-danger-ghost" onclick="laporan.reset()" title="Hapus semua isi formulir ini">
+                Reset
+              </button>
+            </div>
+          </div>
+        </section>
+        <!-- ===================================================================
+         MODUL 0: DASHBOARD PERUSAHAAN
+         =================================================================== -->
+        <section id="mod-dashboard" class="module active" role="tabpanel" aria-labelledby="tab-dashboard" tabindex="0">
+          <div class="section-head">
+            <div class="eyebrow">Beranda</div>
+            <h1>Dashboard Perusahaan</h1>
+            <p class="desc">
+              Ringkasan metrik keselamatan kerja, status sinkronisasi database, dan performa JSA/IBPPR.
+            </p>
+          </div>
+
+          <!-- Grid Kartu KPI -->
+          <div class="dashboard-grid">
+            <!-- JSA Log Count -->
+            <div class="kpi-card">
+              <div class="kpi-icon kpi-blue">
+                <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              </div>
+              <div class="kpi-info">
+                <div class="kpi-value" id="kpi-total-jsa">0</div>
+                <div class="kpi-label">Total Dokumen JSA</div>
+              </div>
+            </div>
+            
+            <!-- IBPPR Count -->
+            <div class="kpi-card">
+              <div class="kpi-icon kpi-amber">
+                <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              </div>
+              <div class="kpi-info">
+                <div class="kpi-value" id="kpi-total-ibppr">0</div>
+                <div class="kpi-label">Total Dokumen IBPPR</div>
+              </div>
+            </div>
+
+            <!-- Laporan Harian Count -->
+            <div class="kpi-card">
+              <div class="kpi-icon kpi-green">
+                <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+              </div>
+              <div class="kpi-info">
+                <div class="kpi-value" id="kpi-total-laporan">0</div>
+                <div class="kpi-label">Total Laporan Harian</div>
+              </div>
+            </div>
+
+            <!-- Offline Queue/Sync Count -->
+            <div class="kpi-card" onclick="syncManager.showSyncModal()" style="cursor:pointer">
+              <div class="kpi-icon kpi-purple">
+                <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              </div>
+              <div class="kpi-info">
+                <div class="kpi-value" id="kpi-pending-sync">0</div>
+                <div class="kpi-label">Data Antrean Offline</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Section Dashboard Tengah -->
+          <div class="dashboard-sections">
+            <!-- Distribusi Risiko JSA Log (Pure CSS/SVG Chart) -->
+            <div class="card" style="margin-bottom:0">
+              <div class="card-title-row">
+                <h3>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M21.21 15.89A10 10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                  Distribusi Tingkat Risiko K3 (JSA LOG)
+                </h3>
+              </div>
+              <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:16px">
+                Berdasarkan riwayat formulir JSA yang tersimpan di database.
+              </p>
+              
+              <div class="risk-dist-list">
+                <div class="risk-dist-row">
+                  <div class="risk-dist-label" style="color:var(--risk-low)">Rendah</div>
+                  <div class="risk-dist-bar-wrapper">
+                    <div class="risk-dist-bar" id="risk-bar-rendah" style="width: 0%; background: var(--risk-low)"></div>
+                  </div>
+                  <div class="risk-dist-val" id="risk-val-rendah" style="color:var(--risk-low)">0</div>
+                </div>
+                
+                <div class="risk-dist-row">
+                  <div class="risk-dist-label" style="color:var(--risk-medium)">Sedang</div>
+                  <div class="risk-dist-bar-wrapper">
+                    <div class="risk-dist-bar" id="risk-bar-sedang" style="width: 0%; background: var(--risk-medium)"></div>
+                  </div>
+                  <div class="risk-dist-val" id="risk-val-sedang" style="color:var(--risk-medium)">0</div>
+                </div>
+                
+                <div class="risk-dist-row">
+                  <div class="risk-dist-label" style="color:var(--risk-high)">Tinggi</div>
+                  <div class="risk-dist-bar-wrapper">
+                    <div class="risk-dist-bar" id="risk-bar-tinggi" style="width: 0%; background: var(--risk-high)"></div>
+                  </div>
+                  <div class="risk-dist-val" id="risk-val-tinggi" style="color:var(--risk-high)">0</div>
+                </div>
+                
+                <div class="risk-dist-row">
+                  <div class="risk-dist-label" style="color:var(--risk-extreme)">Ekstrem</div>
+                  <div class="risk-dist-bar-wrapper">
+                    <div class="risk-dist-bar" id="risk-bar-ekstrem" style="width: 0%; background: var(--risk-extreme)"></div>
+                  </div>
+                  <div class="risk-dist-val" id="risk-val-ekstrem" style="color:var(--risk-extreme)">0</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Links / Sistem Log -->
+            <div class="card" style="margin-bottom:0">
+              <div class="card-title-row">
+                <h3>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  Akses Cepat Modul
+                </h3>
+              </div>
+              <div style="margin-top:8px">
+                <button class="quick-link-btn" onclick="switchTab('ibppr')">
+                  <span>Buat Dokumen IBPPR Baru</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                <button class="quick-link-btn" onclick="switchTab('jsa')">
+                  <span>Buat Analisis Bahaya (JSA) Baru</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                <button class="quick-link-btn" onclick="switchTab('laporan')">
+                  <span>Isi Laporan Harian Baru</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                <button class="quick-link-btn" onclick="switchTab('log')">
+                  <span>Lihat Riwayat &amp; Cetak PDF JSA</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="mod-ibppr" class="module" role="tabpanel" aria-labelledby="tab-ibppr" tabindex="0">
           <div class="section-head">
             <div class="eyebrow">Modul 1</div>
             <h1>IBPPR</h1>
@@ -843,78 +1434,8 @@ window.onerror = function(msg, url, line, col, error) {
         <!-- /mod-log -->
       </main>
       <!-- /view-area -->
-
-      <!-- TAB BAR NAVIGASI BAWAH -->
-      <nav class="tabbar" role="tablist" aria-label="Menu Modul SiKerja">
-        <button
-          class="tab-btn is-active"
-          onclick="switchTab('ibppr')"
-          id="tab-ibppr"
-          role="tab"
-          aria-selected="true"
-          aria-controls="mod-ibppr"
-        >
-          <div class="tab-ic">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke-width="2"
-              stroke-linecap="round"
-            >
-              <path d="M9 11l3 3L22 4" />
-              <path
-                d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
-              />
-            </svg>
-          </div>
-          <span class="tab-label">IBPPR</span>
-        </button>
-        <button
-          class="tab-btn"
-          onclick="switchTab('jsa')"
-          id="tab-jsa"
-          role="tab"
-          aria-selected="false"
-          aria-controls="mod-jsa"
-        >
-          <div class="tab-ic">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke-width="2"
-              stroke-linecap="round"
-            >
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            </svg>
-          </div>
-          <span class="tab-label">JSA</span>
-        </button>
-        <button
-          class="tab-btn"
-          onclick="switchTab('log')"
-          id="tab-log"
-          role="tab"
-          aria-selected="false"
-          aria-controls="mod-log"
-        >
-          <div class="tab-ic">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke-width="2"
-              stroke-linecap="round"
-            >
-              <line x1="8" y1="6" x2="21" y2="6" />
-              <line x1="8" y1="12" x2="21" y2="12" />
-              <line x1="8" y1="18" x2="21" y2="18" />
-              <line x1="3" y1="6" x2="3.01" y2="6" />
-              <line x1="3" y1="12" x2="3.01" y2="12" />
-              <line x1="3" y1="18" x2="3.01" y2="18" />
-            </svg>
-          </div>
-          <span class="tab-label">JSA Log</span>
-        </button>
-      </nav>
+      </div>
+      <!-- /main-container -->
     </div>
     <!-- /app-shell -->
 
@@ -2165,12 +2686,208 @@ window.onerror = function(msg, url, line, col, error) {
          simulasi simpan; tinggal isi GAS_URL dengan URL doPost() Apps Script.
        - Semua id field mengikuti konvensi: "modul-namaField"
          (misal "ibppr-noForm", "jsa-tanggal") agar mudah dipetakan.
+                font-family: var(--font-body);
+                font-size: 13.5px;
+                font-weight: 700;
+                color: var(--ink-soft);
+                cursor: pointer;
+              "
+            >
+              Batal
+            </button>
+            <button
+              onclick="pelaksanaDialog.save()"
+              type="button"
+              style="
+                flex: 1;
+                padding: 11px;
+                border-radius: var(--r-sm);
+                border: none;
+                background: var(--amber);
+                font-family: var(--font-body);
+                font-size: 13.5px;
+                font-weight: 700;
+                color: #fff;
+                cursor: pointer;
+              "
+            >
+              Simpan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL DETAIL SINKRONISASI & ANTRIAN OFFLINE -->
+    <div
+      id="sync-modal-overlay"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 28, 46, 0.55);
+        backdrop-filter: blur(4px);
+        z-index: 94;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      "
+      onclick="syncManager.onOverlayClick(event)"
+    >
+      <div
+        id="sync-modal-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sync-modal-title"
+        aria-describedby="sync-modal-desc"
+        tabindex="-1"
+        style="
+          background: #fff;
+          border-radius: var(--r-lg);
+          width: 100%;
+          max-width: 420px;
+          box-shadow: 0 20px 60px -10px rgba(15, 28, 46, 0.35);
+          overflow: hidden;
+          transform: scale(0.95);
+          opacity: 0;
+          transition:
+            transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+            opacity 0.18s ease;
+        "
+      >
+        <div style="height: 4px; background: var(--amber)"></div>
+        <div style="padding: 22px 20px 20px">
+          <!-- Header -->
+          <div style="display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px;">
+            <div style="width: 42px; height: 42px; border-radius: 12px; background: var(--amber-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+            </div>
+            <div style="flex: 1;">
+              <div id="sync-modal-title" style="font-family: var(--font-head); font-size: 15px; font-weight: 800; color: var(--ink); margin-bottom: 4px;">
+                Status Sinkronisasi & Antrean
+              </div>
+              <div id="sync-modal-desc" style="font-size: 12.5px; color: var(--ink-soft); line-height: 1.5;">
+                Kelola data JSA yang tertunda karena koneksi offline.
+              </div>
+            </div>
+            <button
+              onclick="syncManager.closeSyncModal()"
+              type="button"
+              aria-label="Tutup dialog status sinkronisasi"
+              style="
+                flex-shrink: 0;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                border: none;
+                background: var(--paper-deep);
+                color: var(--ink-soft);
+                font-size: 16px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                line-height: 1;
+              "
+            >
+              &times;
+            </button>
+          </div>
+
+          <!-- Status List -->
+          <div style="background: var(--paper-deep); border-radius: var(--r-sm); padding: 12px; margin-bottom: 16px; border: 1px solid var(--line);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: var(--ink-soft); font-weight: 500;">Status Internet:</span>
+              <span id="sync-modal-net-status" style="font-weight: 700; color: var(--risk-low);">Online</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--ink-soft); font-weight: 500;">Antrean Tertunda:</span>
+              <span id="sync-modal-queue-count" style="font-weight: 700; color: var(--ink);">0 data</span>
+            </div>
+          </div>
+
+          <!-- Queue Items list -->
+          <div style="max-height: 160px; overflow-y: auto; margin-bottom: 16px; border: 1.5px solid var(--line); border-radius: var(--r-sm); display: none;" id="sync-modal-list-wrapper">
+            <div id="sync-modal-list" style="padding: 4px 0;"></div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button
+              id="sync-modal-action-btn"
+              onclick="syncManager.triggerSyncFromModal()"
+              style="
+                width: 100%;
+                padding: 12px;
+                border-radius: var(--r-sm);
+                border: none;
+                background: var(--amber);
+                font-family: var(--font-body);
+                font-size: 13.5px;
+                font-weight: 700;
+                color: #fff;
+                cursor: pointer;
+                transition: background 0.15s;
+              "
+            >
+              Coba Sinkronkan Sekarang
+            </button>
+            <button
+              id="sync-modal-download-btn"
+              onclick="syncManager.downloadQueueBackup()"
+              style="
+                width: 100%;
+                padding: 11px;
+                border-radius: var(--r-sm);
+                border: 1.5px solid var(--line-strong);
+                background: #fff;
+                font-family: var(--font-body);
+                font-size: 13px;
+                font-weight: 700;
+                color: var(--ink-soft);
+                cursor: pointer;
+              "
+            >
+              Unduh Cadangan Antrean (JSON)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INPUT TERSEMBUNYI UNTUK UPLOAD DRAFT JSON -->
+    <input
+      type="file"
+      id="draft-file-input"
+      accept=".json"
+      style="display: none"
+      onchange="loadDraftFile(event)"
+    />
+
+    <!-- =========================================================================
+     JAVASCRIPT - semua logic dalam satu blok script
+     Struktur:
+       1. switchTab()        – navigasi antar modul
+       2. showToast()        – notifikasi singkat
+       3. ibppr.*            – state + logic modul IBPPR
+       4. jsa.*              – state + logic modul JSA (termasuk APD checklist)
+       5. jsaLog.*           – state + logic modul JSA LOG
+       6. init()             – inisialisasi semua modul saat halaman dimuat
+
+     Catatan integrasi Google Apps Script:
+       - Fungsi submitToAppsScript(url, payload) siap menggantikan
+         simulasi simpan; tinggal isi GAS_URL dengan URL doPost() Apps Script.
+       - Semua id field mengikuti konvensi: "modul-namaField"
+         (misal "ibppr-noForm", "jsa-tanggal") agar mudah dipetakan.
      ========================================================================= -->
     <script src="js/exporters.js?v=2"></script>
     <script src="js/api.js?v=2"></script>
     <script src="js/sync.js?v=2"></script>
     <script src="js/ibppr.js?v=2"></script>
     <script src="js/jsa.js?v=2"></script>
+    <script src="js/laporan.js?v=2"></script>
     <script src="js/jsa-log.js?v=2"></script>
     <script src="js/main.js?v=2"></script>
   </body>

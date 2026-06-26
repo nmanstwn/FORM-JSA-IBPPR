@@ -506,6 +506,10 @@
               jsa.loadDraft(draft);
               switchTab("jsa");
               showToast("✓ Draft JSA berhasil dimuat");
+            } else if (draft.modul === "LAPORAN") {
+              laporan.loadDraft(draft);
+              switchTab("laporan");
+              showToast("✓ Draft Laporan Harian berhasil dimuat");
             } else {
               showToast("⚠ Format draft tidak dikenal");
             }
@@ -954,6 +958,17 @@
             // Langkah JSA dari state
             const jsaLangkah = jsa.getSteps();
 
+            // Laporan Header fields
+            const laporanHeader = {};
+            [
+              "noLaporan", "tanggal", "pengawas", "lokasi", "cuaca",
+              "jumlahPekerja", "jamMulai", "jamSelesai", "deskripsiPekerjaan",
+              "persenProgres", "temuanK3", "tindakanKoreksi", "alat", "material"
+            ].forEach(f => {
+              const el = document.getElementById("laporan-" + f);
+              if (el) laporanHeader[f] = el.value;
+            });
+
             // Filter & search JSA Log
             const logSearch =
               document.getElementById("log-search")?.value || "";
@@ -963,7 +978,7 @@
               document.getElementById("log-filter-tahun")?.value || "";
 
             const data = {
-              activeTab: sessionStorage.getItem("sk_activeTab") || "ibppr",
+              activeTab: sessionStorage.getItem("sk_activeTab") || "dashboard",
               scrollTop,
               docMeta: DOC_META,
               ibpprHeader,
@@ -971,6 +986,7 @@
               jsaHeader,
               apdChecked,
               jsaLangkah,
+              laporanHeader,
               logSearch,
               logFilterResiko,
               logFilterTahun,
@@ -1012,6 +1028,7 @@
         syncManager.init();
         ibppr.init();
         jsa.init();
+        laporan.init();
         jsaLog.init();
         setTimeout(initTextareaHeights, 100);
 
@@ -1047,6 +1064,7 @@
         if (sess) {
           // 1. Tab aktif
           if (sess.activeTab) switchTab(sess.activeTab);
+          else switchTab("dashboard");
 
           // 1b. Info dokumen (No. Dok / No. Rev / Tgl Terbit)
           if (sess.docMeta) {
@@ -1103,6 +1121,20 @@
             jsa.setSteps(sess.jsaLangkah);
           }
 
+          // 6b. Laporan header fields
+          if (sess.laporanHeader) {
+            Object.entries(sess.laporanHeader).forEach(([f, v]) => {
+              const el = document.getElementById("laporan-" + f);
+              if (el) {
+                el.value = v;
+                if (f === "persenProgres") {
+                  const rangeEl = document.getElementById("laporan-persenProgres-range");
+                  if (rangeEl) rangeEl.value = v;
+                }
+              }
+            });
+          }
+
           // 7. JSA Log filter & search
           if (sess.logSearch !== undefined) {
             const el = document.getElementById("log-search");
@@ -1136,8 +1168,67 @@
           }
 
           setTimeout(initTextareaHeights, 150);
+        } else {
+          switchTab("dashboard");
         }
 
         // Mulai auto-save setelah restore selesai
-        setTimeout(() => session.startAutoSave(), 300);
+        setTimeout(() => {
+          session.startAutoSave();
+          updateDashboardStats();
+        }, 300);
       });
+
+      // Globally accessible function for dashboard stats
+      function updateDashboardStats(jsaEntries) {
+        // 1. Total JSA
+        let entries = jsaEntries;
+        if (!entries) {
+          try {
+            const cached = localStorage.getItem("sk_jsa_log_entries");
+            if (cached) entries = JSON.parse(cached);
+          } catch (e) {}
+        }
+        const jsaCount = entries ? entries.length : 0;
+        const kpiTotalJsa = document.getElementById("kpi-total-jsa");
+        if (kpiTotalJsa) kpiTotalJsa.textContent = jsaCount;
+        
+        // 2. Total IBPPR
+        let ibpprCount = 0;
+        try {
+          ibpprCount = parseInt(localStorage.getItem("sk_ibppr_success_count")) || 0;
+        } catch (e) {}
+        const kpiTotalIbppr = document.getElementById("kpi-total-ibppr");
+        if (kpiTotalIbppr) kpiTotalIbppr.textContent = ibpprCount;
+
+        // 3. Total Laporan
+        let laporanCount = 0;
+        try {
+          laporanCount = parseInt(localStorage.getItem("sk_laporan_success_count")) || 0;
+        } catch (e) {}
+        const kpiTotalLaporan = document.getElementById("kpi-total-laporan");
+        if (kpiTotalLaporan) kpiTotalLaporan.textContent = laporanCount;
+
+        // 4. Pending Sync
+        if (typeof syncManager !== "undefined") {
+          const pendingCount = syncManager.getPendingCount();
+          const kpiPendingSync = document.getElementById("kpi-pending-sync");
+          if (kpiPendingSync) kpiPendingSync.textContent = pendingCount;
+        }
+
+        // 5. Risk distribution
+        if (entries) {
+          const counts = { Rendah: 0, Sedang: 0, Tinggi: 0, Ekstrem: 0 };
+          entries.forEach(e => {
+            if (counts[e.resiko] !== undefined) counts[e.resiko]++;
+          });
+          const maxCount = Math.max(1, counts.Rendah, counts.Sedang, counts.Tinggi, counts.Ekstrem);
+          ["Rendah", "Sedang", "Tinggi", "Ekstrem"].forEach(r => {
+            const lower = r.toLowerCase();
+            const valEl = document.getElementById("risk-val-" + lower);
+            const barEl = document.getElementById("risk-bar-" + lower);
+            if (valEl) valEl.textContent = counts[r];
+            if (barEl) barEl.style.width = ((counts[r] / maxCount) * 100) + "%";
+          });
+        }
+      }

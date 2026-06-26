@@ -50,6 +50,8 @@ function doPost(e) {
       return handleAddEntry(payload);
     } else if (action === "delete") {
       return handleDeleteEntry(requestData.id);
+    } else if (action === "add_laporan") {
+      return handleAddLaporan(payload);
     } else {
       return responseJSON({ success: false, error: "Tindakan (action) tidak dikenal" });
     }
@@ -207,6 +209,68 @@ function handleListEntries() {
   }
   
   return responseJSON({ success: true, data: list });
+}
+
+/**
+ * Menyimpan data laporan harian ke sheet "LAPORAN HARIAN" (Upsert)
+ */
+function handleAddLaporan(payload) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("LAPORAN HARIAN");
+  
+  if (!sheet) {
+    sheet = ss.insertSheet("LAPORAN HARIAN");
+    sheet.appendRow([
+      "No", 
+      "No. Laporan", 
+      "Tanggal", 
+      "Pengawas", 
+      "Lokasi", 
+      "Cuaca", 
+      "Deskripsi Pekerjaan", 
+      "Jumlah Tenaga Kerja", 
+      "Temuan K3", 
+      "Tindakan Koreksi"
+    ]);
+    sheet.getRange(1, 1, 1, 10).setFontWeight("bold").setBackground("#f3f3f3");
+  }
+  
+  const noLaporan = payload.noLaporan;
+  if (!noLaporan) {
+    return responseJSON({ success: false, error: "No. Laporan wajib diisi" });
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  let foundRowIdx = -1;
+  
+  // Cari berdasarkan No. Laporan (kolom B, index 1)
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][1]).trim() === String(noLaporan).trim()) {
+      foundRowIdx = i + 1;
+      break;
+    }
+  }
+  
+  const rowData = [
+    foundRowIdx !== -1 ? foundRowIdx - 1 : data.length, // No
+    noLaporan,
+    payload.tanggal || "",
+    payload.pengawas || "",
+    payload.lokasi || "",
+    payload.cuaca || "",
+    payload.deskripsiPekerjaan || "",
+    payload.jumlahPekerja || 0,
+    payload.temuanK3 || "",
+    payload.tindakanKoreksi || ""
+  ];
+  
+  if (foundRowIdx !== -1) {
+    sheet.getRange(foundRowIdx, 1, 1, 10).setValues([rowData]);
+    return responseJSON({ success: true, updated: true, id: noLaporan });
+  } else {
+    sheet.appendRow(rowData);
+    return responseJSON({ success: true, updated: false, id: noLaporan });
+  }
 }
 
 /**

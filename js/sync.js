@@ -67,9 +67,13 @@
         
         function queueOffline(action, data) {
           const queue = getQueue();
-          // Hindari duplikasi log yang sama berdasarkan noFormJSA jika ada
-          const noForm = data.payload?.noFormJSA || data.payload?.noForm || "baru";
-          const exists = queue.some(item => (item.data.payload?.noFormJSA === noForm || item.data.payload?.noForm === noForm));
+          // Hindari duplikasi log yang sama berdasarkan noFormJSA atau noLaporan jika ada
+          const noForm = data.payload?.noLaporan || data.payload?.noFormJSA || data.payload?.noForm || "baru";
+          const exists = queue.some(item => (
+            item.data.payload?.noLaporan === noForm ||
+            item.data.payload?.noFormJSA === noForm || 
+            item.data.payload?.noForm === noForm
+          ));
           if (!exists) {
             queue.push({
               id: Date.now() + Math.random().toString(36).substr(2, 5),
@@ -110,6 +114,19 @@
                   if (item.data._payload && res.id) {
                     jsaLog._detailMap = jsaLog._detailMap || {};
                     jsaLog._detailMap[res.id] = item.data._payload;
+                  }
+                  successCount++;
+                  continue; // Berhasil, jangan masukkan ke remaining
+                }
+              } else if (item.action === "add_laporan") {
+                const res = await apiCall("add_laporan", { payload: item.data.payload });
+                if (res && res.success) {
+                  // Simpan ke detail cache local Laporan
+                  if (item.data._payload && res.id) {
+                    if (typeof laporan !== "undefined") {
+                      laporan._detailMap = laporan._detailMap || {};
+                      laporan._detailMap[res.id] = item.data._payload;
+                    }
                   }
                   successCount++;
                   continue; // Berhasil, jangan masukkan ke remaining
@@ -179,8 +196,8 @@
           if (pendingCount > 0) {
             listWrapper.style.display = "block";
             list.innerHTML = queue.map((item, idx) => {
-              const docNo = item.data.payload?.noFormJSA || item.data.payload?.noForm || item.data.payload?.header?.noJSA || "Dokumen baru";
-              const type = item.action === "add" ? "Kirim JSA" : "Sinkronisasi";
+              const docNo = item.data.payload?.noLaporan || item.data.payload?.noFormJSA || item.data.payload?.noForm || item.data.payload?.header?.noJSA || "Dokumen baru";
+              const type = item.action === "add" ? "Kirim JSA" : (item.action === "add_laporan" ? "Kirim Laporan" : "Sinkronisasi");
               const time = new Date(item.timestamp).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' });
               return `
                 <div style="display:flex;justify-content:space-between;padding:8px 12px;border-bottom:${idx < pendingCount - 1 ? '1px solid var(--line)' : 'none'};font-size:12px;color:var(--ink-soft);">

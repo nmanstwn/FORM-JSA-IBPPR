@@ -118,16 +118,33 @@
               }
               // data dari sheet diurutkan lama→baru (No urut), tampilkan terbaru di atas
               entries = (res.data || []).slice().reverse();
+              try {
+                localStorage.setItem("sk_jsa_log_entries", JSON.stringify(entries));
+              } catch (e) {}
               // [BARU] JSA Log selalu refer ke spreadsheet - terapkan ulang
               // filter/pencarian yang sedang aktif di atas data terbaru ini
               this.filter();
+              if (typeof updateDashboardStats === "function") {
+                updateDashboardStats(entries);
+              }
             } catch (err) {
               console.error("[jsaLog] Gagal memuat data:", err);
-              showToast("⚠ Gagal memuat data JSA Log dari spreadsheet");
-              entries = [];
-              filteredEntries = [];
-              renderStats(entries);
-              renderList(entries);
+              try {
+                const cached = localStorage.getItem("sk_jsa_log_entries");
+                if (cached) {
+                  entries = JSON.parse(cached);
+                  console.log("[jsaLog] Menggunakan data cache offline");
+                } else {
+                  entries = [];
+                }
+              } catch (e) {
+                entries = [];
+              }
+              filteredEntries = [...entries];
+              this.filter();
+              if (typeof updateDashboardStats === "function") {
+                updateDashboardStats(entries);
+              }
             } finally {
               if (refreshBtn) refreshBtn.disabled = false;
               if (refreshIcon)
