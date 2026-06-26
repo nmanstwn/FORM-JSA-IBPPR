@@ -1228,6 +1228,7 @@
         } catch (err) {
           console.error("[PDF] gagal membuat laporan harian:", err);
           showToast("⚠ Gagal membuat PDF Laporan Harian");
+          throw err;
         } finally {
           if (pdfBtn) pdfBtn.disabled = false;
           if (pdfLabel) pdfLabel.textContent = "Download PDF";

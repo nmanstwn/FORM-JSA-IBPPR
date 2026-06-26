@@ -409,7 +409,7 @@
         jsa.reset();
 
         // Isi data minimal JSA
-        document.getElementById("jsa-noForm").value = "JSA-TEST-OFFLINE";
+        document.getElementById("jsa-noJSA").value = "JSA-TEST-OFFLINE";
         document.getElementById("jsa-tanggal").value = "2026-06-26";
         document.getElementById("jsa-jenisPekerjaan").value = "Tes Offline-First";
         document.getElementById("jsa-lokasi").value = "Sistem Lokal";
