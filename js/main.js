@@ -17,9 +17,7 @@
       /* -------------------------------------------------------------------------
        KONSTANTA & KONFIGURASI
        ------------------------------------------------------------------------- */
-      // GAS_URL: isi dengan URL doPost() Google Apps Script setelah deploy
-      const GAS_URL =
-        "https://script.google.com/macros/s/AKfycbwvOxHZDm14NTmFOTk5AJJH1AvGq7sHTe44Q0OC8W3Q0pI1enaxQBn0jezwBdEPvxTS/exec";
+      // GAS_URL didefinisikan secara global di index.html agar mudah dikonfigurasi oleh pengguna.
 
       // Daftar APD standar konstruksi (JSA sheet, rows A7:H15)
       const APD_LIST = [

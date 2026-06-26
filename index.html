@@ -43,6 +43,12 @@
   </head>
   <body>
 <script>
+      // =========================================================================
+      // KONFIGURASI BACKEND (Google Apps Script Web App URL)
+      // Ganti URL di bawah dengan URL doPost() Anda setelah mendeploy GAS_CODE.js
+      // =========================================================================
+      const GAS_URL = "https://script.google.com/macros/s/AKfycbwvOxHZDm14NTmFOTk5AJJH1AvGq7sHTe44Q0OC8W3Q0pI1enaxQBn0jezwBdEPvxTS/exec";
+
 window.onerror = function(msg, url, line, col, error) {
     var div = document.createElement('div');
     div.style.position = 'fixed';
