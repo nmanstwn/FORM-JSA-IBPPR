@@ -152,7 +152,8 @@
                   const el = document.getElementById("jsa-" + f);
                   if (el) el.value = "";
                 });
-                document.getElementById("jsa-resiko").value = "";
+                const resEl = document.getElementById("jsa-resiko");
+                if (resEl) resEl.value = "";
                 showToast("Form JSA direset");
               },
             );

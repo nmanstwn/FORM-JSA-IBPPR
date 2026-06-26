@@ -324,7 +324,8 @@
           const names = Array.from(inputs)
             .map((el) => el.value.trim())
             .filter(Boolean);
-          document.getElementById("jsa-namaPelaksana").value = names.join(", ");
+          const pelaksanaEl = document.getElementById("jsa-namaPelaksana");
+          if (pelaksanaEl) pelaksanaEl.value = names.join(", ");
           const preview = document.getElementById("jsa-namaPelaksana-preview");
           if (names.length) {
             preview.style.color = "var(--ink)";

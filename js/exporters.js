@@ -1016,213 +1016,262 @@
           const colVal = 30;
           const colJudul = tableW - colLogo - colSMK3 - colLabel - colVal; // 190 - 22 - 22 - 25 - 30 = 91 mm
 
-          doc.autoTable({
-            startY: 10,
-            margin: { left: marginL, right: marginR },
-            tableWidth: tableW,
-            body: [
-              [
-                { content: "", rowSpan: 3, styles: { cellWidth: colLogo, minCellHeight: 20 } },
-                {
-                  content: "LAPORAN HARIAN PROYEK",
-                  rowSpan: 3,
-                  styles: {
-                    cellWidth: colJudul,
-                    halign: "center",
-                    valign: "middle",
-                    fontStyle: "bold",
-                    fontSize: 11,
+          // ── 1. HEADER TABLE ──
+          try {
+            doc.autoTable({
+              startY: 10,
+              margin: { left: marginL, right: marginR },
+              tableWidth: tableW,
+              body: [
+                [
+                  { content: "", rowSpan: 3, styles: { minCellHeight: 20 } },
+                  {
+                    content: "LAPORAN HARIAN PROYEK",
+                    rowSpan: 3,
+                    styles: {
+                      halign: "center",
+                      valign: "middle",
+                      fontStyle: "bold",
+                      fontSize: 11,
+                    },
                   },
-                },
-                { content: "", rowSpan: 3, styles: { cellWidth: colSMK3, minCellHeight: 20 } },
-                { content: "No. Dok", styles: { cellWidth: colLabel, fontStyle: "bold" } },
-                { content: DOC_META.noDok, styles: { cellWidth: colVal } },
+                  { content: "", rowSpan: 3, styles: { minCellHeight: 20 } },
+                  { content: "No. Dok", styles: { fontStyle: "bold" } },
+                  { content: DOC_META.noDok },
+                ],
+                [
+                  { content: "No. Rev", styles: { fontStyle: "bold" } },
+                  { content: DOC_META.noRev },
+                ],
+                [
+                  { content: "Tgl Terbit", styles: { fontStyle: "bold" } },
+                  { content: DOC_META.tglTerbit },
+                ],
               ],
-              [
-                { content: "No. Rev", styles: { fontStyle: "bold" } },
-                { content: DOC_META.noRev },
-              ],
-              [
-                { content: "Tgl Terbit", styles: { fontStyle: "bold" } },
-                { content: DOC_META.tglTerbit },
-              ],
-            ],
-            styles: { ...baseStyle },
-            theme: "grid",
-            didDrawCell(data) {
-              if (data.row.index === 0 && data.column.index === 0 && logoB64) {
-                const s = 14;
-                doc.addImage(
-                  logoB64,
-                  "PNG",
-                  data.cell.x + (data.cell.width - s) / 2,
-                  data.cell.y + (data.cell.height - s) / 2,
-                  s,
-                  s
-                );
-              }
-              if (data.row.index === 0 && data.column.index === 2 && smk3B64) {
-                const s = 14;
-                doc.addImage(
-                  smk3B64,
-                  "PNG",
-                  data.cell.x + (data.cell.width - s) / 2,
-                  data.cell.y + (data.cell.height - s) / 2,
-                  s,
-                  s
-                );
-              }
-            },
-          });
+              styles: { ...baseStyle },
+              columnStyles: {
+                0: { cellWidth: colLogo },
+                1: { cellWidth: colJudul },
+                2: { cellWidth: colSMK3 },
+                3: { cellWidth: colLabel },
+                4: { cellWidth: colVal }
+              },
+              theme: "grid",
+              didDrawCell(data) {
+                if (data.row.index === 0 && data.column.index === 0 && logoB64) {
+                  const s = 14;
+                  doc.addImage(
+                    logoB64,
+                    "PNG",
+                    data.cell.x + (data.cell.width - s) / 2,
+                    data.cell.y + (data.cell.height - s) / 2,
+                    s,
+                    s
+                  );
+                }
+                if (data.row.index === 0 && data.column.index === 2 && smk3B64) {
+                  const s = 14;
+                  doc.addImage(
+                    smk3B64,
+                    "PNG",
+                    data.cell.x + (data.cell.width - s) / 2,
+                    data.cell.y + (data.cell.height - s) / 2,
+                    s,
+                    s
+                  );
+                }
+              },
+            });
+          } catch (e) {
+            throw new Error("Gagal menggambar tabel Header Laporan: " + e.message);
+          }
 
           // ── 2. INFORMASI UMUM ──
-          doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 4,
-            margin: { left: marginL, right: marginR },
-            tableWidth: tableW,
-            body: [
-              [
-                { content: "No. Laporan", styles: { fontStyle: "bold", cellWidth: 40 } },
-                { content: payload.noLaporan || "-" },
-                { content: "Tanggal", styles: { fontStyle: "bold", cellWidth: 40 } },
-                { content: payload.tanggal ? fmtDate(payload.tanggal) : "-" },
+          try {
+            doc.autoTable({
+              startY: doc.lastAutoTable.finalY + 4,
+              margin: { left: marginL, right: marginR },
+              tableWidth: tableW,
+              body: [
+                [
+                  { content: "No. Laporan", styles: { fontStyle: "bold" } },
+                  { content: payload.noLaporan || "-" },
+                  { content: "Tanggal", styles: { fontStyle: "bold" } },
+                  { content: payload.tanggal ? fmtDate(payload.tanggal) : "-" },
+                ],
+                [
+                  { content: "Nama Pengawas", styles: { fontStyle: "bold" } },
+                  { content: payload.pengawas || "-" },
+                  { content: "Lokasi Pekerjaan", styles: { fontStyle: "bold" } },
+                  { content: payload.lokasi || "-" },
+                ],
+                [
+                  { content: "Kondisi Cuaca", styles: { fontStyle: "bold" } },
+                  { content: payload.cuaca || "Cerah" },
+                  { content: "Jam Kerja", styles: { fontStyle: "bold" } },
+                  { content: (payload.jamMulai || "08:00") + " s/d " + (payload.jamSelesai || "17:00") + " WIB" },
+                ],
+                [
+                  { content: "Jumlah Tenaga Kerja", styles: { fontStyle: "bold" } },
+                  { content: (payload.jumlahPekerja || "0") + " Orang", colspan: 3 },
+                ],
               ],
-              [
-                { content: "Nama Pengawas", styles: { fontStyle: "bold" } },
-                { content: payload.pengawas || "-" },
-                { content: "Lokasi Pekerjaan", styles: { fontStyle: "bold" } },
-                { content: payload.lokasi || "-" },
-              ],
-              [
-                { content: "Kondisi Cuaca", styles: { fontStyle: "bold" } },
-                { content: payload.cuaca || "Cerah" },
-                { content: "Jam Kerja", styles: { fontStyle: "bold" } },
-                { content: (payload.jamMulai || "08:00") + " s/d " + (payload.jamSelesai || "17:00") + " WIB" },
-              ],
-              [
-                { content: "Jumlah Tenaga Kerja", styles: { fontStyle: "bold" } },
-                { content: (payload.jumlahPekerja || "0") + " Orang", colspan: 3 },
-              ],
-            ],
-            styles: { ...baseStyle },
-            theme: "grid",
-          });
+              styles: { ...baseStyle },
+              columnStyles: {
+                0: { cellWidth: 40 },
+                1: { cellWidth: 55 },
+                2: { cellWidth: 40 },
+                3: { cellWidth: 55 }
+              },
+              theme: "grid",
+            });
+          } catch (e) {
+            throw new Error("Gagal menggambar tabel Informasi Umum Laporan: " + e.message);
+          }
 
           // ── 3. DETAIL AKTIVITAS & PROGRES ──
-          doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 4,
-            margin: { left: marginL, right: marginR },
-            tableWidth: tableW,
-            body: [
-              [
-                {
-                  content: "DETAIL AKTIVITAS & PROGRES KERJA",
-                  colspan: 2,
-                  styles: { fontStyle: "bold", fillColor: [240, 240, 240] },
-                },
+          try {
+            doc.autoTable({
+              startY: doc.lastAutoTable.finalY + 4,
+              margin: { left: marginL, right: marginR },
+              tableWidth: tableW,
+              body: [
+                [
+                  {
+                    content: "DETAIL AKTIVITAS & PROGRES KERJA",
+                    colspan: 2,
+                    styles: { fontStyle: "bold", fillColor: [240, 240, 240] },
+                  },
+                ],
+                [
+                  { content: "Deskripsi Aktivitas Hari Ini", styles: { fontStyle: "bold" } },
+                  { content: payload.deskripsiPekerjaan || "-", styles: { halign: "left" } },
+                ],
+                [
+                  { content: "Persentase Progres Kerja", styles: { fontStyle: "bold" } },
+                  { content: (payload.persenProgres || "0") + " %", styles: { fontStyle: "bold" } },
+                ],
               ],
-              [
-                { content: "Deskripsi Aktivitas Hari Ini", styles: { fontStyle: "bold", cellWidth: 50 } },
-                { content: payload.deskripsiPekerjaan || "-", styles: { halign: "left" } },
-              ],
-              [
-                { content: "Persentase Progres Kerja", styles: { fontStyle: "bold" } },
-                { content: (payload.persenProgres || "0") + " %", styles: { fontStyle: "bold" } },
-              ],
-            ],
-            styles: { ...baseStyle },
-            theme: "grid",
-          });
+              styles: { ...baseStyle },
+              columnStyles: {
+                0: { cellWidth: 50 },
+                1: { cellWidth: 140 }
+              },
+              theme: "grid",
+            });
+          } catch (e) {
+            throw new Error("Gagal menggambar tabel Detail Aktivitas Laporan: " + e.message);
+          }
 
           // ── 4. ASPEK KESELAMATAN KERJA (K3) ──
-          doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 4,
-            margin: { left: marginL, right: marginR },
-            tableWidth: tableW,
-            body: [
-              [
-                {
-                  content: "ASPEK KESELAMATAN & KESEHATAN KERJA (K3)",
-                  colspan: 2,
-                  styles: { fontStyle: "bold", fillColor: [240, 240, 240] },
-                },
+          try {
+            doc.autoTable({
+              startY: doc.lastAutoTable.finalY + 4,
+              margin: { left: marginL, right: marginR },
+              tableWidth: tableW,
+              body: [
+                [
+                  {
+                    content: "ASPEK KESELAMATAN & KESEHATAN KERJA (K3)",
+                    colspan: 2,
+                    styles: { fontStyle: "bold", fillColor: [240, 240, 240] },
+                  },
+                ],
+                [
+                  { content: "Temuan Bahaya (Unsafe Act/Condition)", styles: { fontStyle: "bold" } },
+                  { content: payload.temuanK3 || "-", styles: { halign: "left" } },
+                ],
+                [
+                  { content: "Tindakan Koreksi Langsung", styles: { fontStyle: "bold" } },
+                  { content: payload.tindakanKoreksi || "-", styles: { halign: "left" } },
+                ],
               ],
-              [
-                { content: "Temuan Bahaya (Unsafe Act/Condition)", styles: { fontStyle: "bold", cellWidth: 50 } },
-                { content: payload.temuanK3 || "-", styles: { halign: "left" } },
-              ],
-              [
-                { content: "Tindakan Koreksi Langsung", styles: { fontStyle: "bold" } },
-                { content: payload.tindakanKoreksi || "-", styles: { halign: "left" } },
-              ],
-            ],
-            styles: { ...baseStyle },
-            theme: "grid",
-          });
+              styles: { ...baseStyle },
+              columnStyles: {
+                0: { cellWidth: 50 },
+                1: { cellWidth: 140 }
+              },
+              theme: "grid",
+            });
+          } catch (e) {
+            throw new Error("Gagal menggambar tabel Keselamatan K3 Laporan: " + e.message);
+          }
 
           // ── 5. LOGISTIK & SUMBER DAYA ──
-          doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 4,
-            margin: { left: marginL, right: marginR },
-            tableWidth: tableW,
-            body: [
-              [
-                {
-                  content: "LOGISTIK & SUMBER DAYA",
-                  colspan: 2,
-                  styles: { fontStyle: "bold", fillColor: [240, 240, 240] },
-                },
+          try {
+            doc.autoTable({
+              startY: doc.lastAutoTable.finalY + 4,
+              margin: { left: marginL, right: marginR },
+              tableWidth: tableW,
+              body: [
+                [
+                  {
+                    content: "LOGISTIK & SUMBER DAYA",
+                    colspan: 2,
+                    styles: { fontStyle: "bold", fillColor: [240, 240, 240] },
+                  },
+                ],
+                [
+                  { content: "Alat/Mesin Utama yang Digunakan", styles: { fontStyle: "bold" } },
+                  { content: payload.alat || "-", styles: { halign: "left" } },
+                ],
+                [
+                  { content: "Material Utama yang Digunakan", styles: { fontStyle: "bold" } },
+                  { content: payload.material || "-", styles: { halign: "left" } },
+                ],
               ],
-              [
-                { content: "Alat/Mesin Utama yang Digunakan", styles: { fontStyle: "bold", cellWidth: 50 } },
-                { content: payload.alat || "-", styles: { halign: "left" } },
-              ],
-              [
-                { content: "Material Utama yang Digunakan", styles: { fontStyle: "bold" } },
-                { content: payload.material || "-", styles: { halign: "left" } },
-              ],
-            ],
-            styles: { ...baseStyle },
-            theme: "grid",
-          });
+              styles: { ...baseStyle },
+              columnStyles: {
+                0: { cellWidth: 50 },
+                1: { cellWidth: 140 }
+              },
+              theme: "grid",
+            });
+          } catch (e) {
+            throw new Error("Gagal menggambar tabel Logistik Laporan: " + e.message);
+          }
 
           // ── 6. SIGN-OFF TTD TABLE ──
           const colTTD = tableW / 2; // 95 mm
-          doc.autoTable({
-            startY: doc.lastAutoTable.finalY + 6,
-            margin: { left: marginL, right: marginR },
-            tableWidth: tableW,
-            body: [
-              [
-                { content: "Dibuat Oleh:", styles: { halign: "center", fontStyle: "bold" } },
-                { content: "Diketahui Oleh:", styles: { halign: "center", fontStyle: "bold" } },
+          try {
+            doc.autoTable({
+              startY: doc.lastAutoTable.finalY + 6,
+              margin: { left: marginL, right: marginR },
+              tableWidth: tableW,
+              body: [
+                [
+                  { content: "Dibuat Oleh:", styles: { halign: "center", fontStyle: "bold" } },
+                  { content: "Diketahui Oleh:", styles: { halign: "center", fontStyle: "bold" } },
+                ],
+                [
+                  { content: "", styles: { minCellHeight: 18 } },
+                  { content: "", styles: { minCellHeight: 18 } },
+                ],
+                [
+                  {
+                    content: payload.pengawas || "Pengawas Lapangan",
+                    styles: { halign: "center", fontStyle: "bold", textDecoration: "underline" },
+                  },
+                  {
+                    content: "Penanggung Jawab K3 / HSE",
+                    styles: { halign: "center", fontStyle: "bold", textDecoration: "underline" },
+                  },
+                ],
+                [
+                  { content: "Pengawas Lapangan", styles: { halign: "center", fontSize: 7.5 } },
+                  { content: "Pimpinan Unit / HSE", styles: { halign: "center", fontSize: 7.5 } },
+                ],
               ],
-              [
-                { content: "", styles: { minCellHeight: 18 } },
-                { content: "", styles: { minCellHeight: 18 } },
-              ],
-              [
-                {
-                  content: payload.pengawas || "Pengawas Lapangan",
-                  styles: { halign: "center", fontStyle: "bold", textDecoration: "underline" },
-                },
-                {
-                  content: "Penanggung Jawab K3 / HSE",
-                  styles: { halign: "center", fontStyle: "bold", textDecoration: "underline" },
-                },
-              ],
-              [
-                { content: "Pengawas Lapangan", styles: { halign: "center", fontSize: 7.5 } },
-                { content: "Pimpinan Unit / HSE", styles: { halign: "center", fontSize: 7.5 } },
-              ],
-            ],
-            styles: { ...baseStyle },
-            columnStyles: {
-              0: { cellWidth: colTTD },
-              1: { cellWidth: colTTD },
-            },
-            theme: "grid",
-          });
+              styles: { ...baseStyle },
+              columnStyles: {
+                0: { cellWidth: colTTD },
+                1: { cellWidth: colTTD },
+              },
+              theme: "grid",
+            });
+          } catch (e) {
+            throw new Error("Gagal menggambar tabel TTD Laporan: " + e.message);
+          }
 
           doc.save(filename);
         } catch (err) {
