@@ -394,25 +394,40 @@
        ========================================================================= */
       // Helper untuk memuat gambar lokal menjadi base64 secara asynchronous
       async function loadImageBase64(src) {
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.onload = function () {
-            try {
-              const canvas = document.createElement("canvas");
-              canvas.width = img.width;
-              canvas.height = img.height;
-              canvas.getContext("2d").drawImage(img, 0, 0);
-              resolve(canvas.toDataURL("image/png"));
-            } catch (e) {
-              resolve(null);
-            }
-          };
-          img.onerror = () => resolve(null);
-          img.src = src;
-        });
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = function () {
+      try {
+        const canvas = document.createElement("canvas");
+        const maxDim = 200; // Capping logo resolution to 200px max (saves huge PDF space while maintaining crisp look)
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/png"));
+      } catch (e) {
+        resolve(null);
       }
+    };
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
 
-      // Generator PDF Vektor JSA
+// Generator PDF Vektor JSA
       async function exportJSAPDF(payload, filename) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({

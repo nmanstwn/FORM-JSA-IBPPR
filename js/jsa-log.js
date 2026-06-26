@@ -375,14 +375,29 @@
             let smk3B64 = null;
 
             function toB64(i) {
-              const c = document.createElement("canvas");
-              c.width = i.width;
-              c.height = i.height;
-              c.getContext("2d").drawImage(i, 0, 0);
-              return c.toDataURL("image/png");
-            }
+  const c = document.createElement("canvas");
+  const maxDim = 200; // Resize to 200px max
+  let w = i.width;
+  let h = i.height;
+  if (w > maxDim || h > maxDim) {
+    if (w > h) {
+      h = Math.round((h * maxDim) / w);
+      w = maxDim;
+    } else {
+      w = Math.round((w * maxDim) / h);
+      h = maxDim;
+    }
+  }
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(i, 0, 0, w, h);
+  return c.toDataURL("image/png");
+}
 
-            function buildPDF() {
+function buildPDF() {
               // ── HEADER: |LOGO HMJ|FORM JSA LOG|LOGO SMK3|No.Dok/Rev/Tgl| ──
               const colLogo = 22;
               const colSMK3 = 22;
