@@ -1,0 +1,2171 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <title>HMJ - FORM IBPPR & JSA</title>
+
+    <!--
+  =========================================================================
+  PROTOTYPE: SiKerja (Sistem Identifikasi & Keselamatan Kerja)
+  -------------------------------------------------------------------------
+  Tiga modul independen, sesuai struktur file Excel "JSA LOG & IBPPR.xlsx":
+    1. IBPPR  -> Form Identifikasi Bahaya, Penilaian, Pengendalian Resiko
+    2. JSA    -> Form Job Safety Analysis
+    3. JSA LOG-> Riwayat / arsip seluruh JSA yang pernah disimpan
+
+  Catatan integrasi Google Apps Script (tahap berikutnya):
+    - Semua data form disimpan dalam object JS (state.ibppr, state.jsa)
+      dengan nama field yang SAMA dengan kolom di Excel (lihat komentar
+      pada tiap field) agar mudah dipetakan ke payload POST / doPost().
+    - Tombol "Simpan & Kirim" pada tiap form sudah disiapkan fungsi
+      submitToAppsScript(payload) sebagai titik integrasi (saat ini
+      hanya simulasi: menyimpan ke localStorage + menambah ke JSA LOG).
+    - Struktur payload mengikuti bentuk array-of-rows per tabel, supaya
+      mudah di-loop di Apps Script saat menulis ke Spreadsheet/Template.
+  =========================================================================
+-->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Archivo+Expanded:wght@700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body>
+<script>
+window.onerror = function(msg, url, line, col, error) {
+    var div = document.createElement('div');
+    div.style.position = 'fixed';
+    div.style.top = '0';
+    div.style.left = '0';
+    div.style.width = '100%';
+    div.style.background = '#e11d48';
+    div.style.color = 'white';
+    div.style.padding = '15px';
+    div.style.zIndex = '999999';
+    div.style.fontSize = '14px';
+    div.style.fontFamily = 'monospace';
+    div.style.boxShadow = '0 4px 6px -1px rgb(0 0 0 / 0.1)';
+    div.innerHTML = '<strong>JavaScript Error:</strong> ' + msg + '<br><strong>File:</strong> ' + url + ' | <strong>Line:</strong> ' + line + ' | <strong>Column:</strong> ' + col;
+    document.body.appendChild(div);
+    return false;
+};
+</script>
+    <!-- =========================================================================
+     APP SHELL
+     ========================================================================= -->
+    <div class="app-shell">
+      <!-- TOP BAR -->
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">
+            <img
+              src="logo.png"
+              alt="Logo"
+              style="width: 24px; height: 24px; object-fit: contain"
+            />
+          </div>
+          <div class="brand-text">
+            <strong>HMJ-AUTOMATIC</strong>
+            <span>Sistem Identifikasi &amp; Keselamatan Kerja</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px">
+          <!-- Indikator Sinkronisasi -->
+          <div
+            id="sync-indicator"
+            role="button"
+            tabindex="0"
+            style="
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              font-family: var(--font-body);
+              font-size: 10px;
+              font-weight: 700;
+              color: rgba(255, 255, 255, 0.7);
+              background: rgba(255, 255, 255, 0.08);
+              padding: 6px 9px;
+              border-radius: 8px;
+              border: 1px solid rgba(255, 255, 255, 0.12);
+              cursor: pointer;
+              transition: background 0.2s, border-color 0.2s;
+            "
+            onclick="syncManager.showSyncModal()"
+            title="Klik untuk melihat detail antrean data offline"
+          >
+            <span
+              id="sync-dot"
+              style="
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #4caf50;
+                display: inline-block;
+                transition: background 0.3s;
+              "
+            ></span>
+            <span id="sync-text">Terhubung</span>
+          </div>
+          <button
+            onclick="document.getElementById('draft-file-input').click()"
+            style="
+              background: rgba(255, 255, 255, 0.12);
+              border: 1px solid rgba(255, 255, 255, 0.2);
+              border-radius: 8px;
+              padding: 6px 11px;
+              color: #fff;
+              font-family: var(--font-body);
+              font-size: 12px;
+              font-weight: 600;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              gap: 6px;
+              white-space: nowrap;
+            "
+            title="Upload file JSON draft untuk mengisi form otomatis"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              style="width: 14px; height: 14px"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            Muat Draft
+          </button>
+          <div
+            class="doc-meta"
+            id="topbar-doc-meta"
+            onclick="docMetaDialog.open()"
+            role="button"
+            tabindex="0"
+            title="Ketuk untuk ubah No. Dok / No. Rev / Tgl Terbit"
+          >
+            <span id="topbar-doc-meta-line1">FR/PK3/JSA/002</span><br /><span
+              id="topbar-doc-meta-line2"
+              >Rev.0 · 10 MEI 2022</span
+            >
+          </div>
+        </div>
+      </header>
+
+      <!-- AREA KONTEN UTAMA -->
+      <main class="view-area">
+        <!-- ===================================================================
+         MODUL 1: IBPPR
+         (Form Identifikasi Bahaya, Penilaian, Pengendalian Resiko)
+         Berdiri sendiri, tidak terhubung ke JSA.
+         Field dipetakan ke kolom sheet "IBPPR" pada file Excel.
+         =================================================================== -->
+        <section id="mod-ibppr" class="module active" role="tabpanel" aria-labelledby="tab-ibppr" tabindex="0">
+          <div class="section-head">
+            <div class="eyebrow">Modul 1</div>
+            <h1>IBPPR</h1>
+            <p class="desc">
+              Identifikasi Bahaya, Penilaian &amp; Pengendalian Resiko (HIRARC)
+            </p>
+          </div>
+
+          <!-- Header Dokumen IBPPR -->
+          <!-- Field: noForm → B4, namaPekerjaan → B5, lokasi → B6 -->
+          <div class="card">
+            <div class="card-title-row">
+              <h3>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  style="width: 16px; height: 16px; stroke: var(--amber)"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <line x1="8" y1="9" x2="16" y2="9" />
+                  <line x1="8" y1="13" x2="14" y2="13" />
+                </svg>
+                Informasi Dokumen
+              </h3>
+            </div>
+            <div class="field-grid cols-2">
+              <div class="field" style="grid-column: 1/-1">
+                <!-- noForm: nomor form IBPPR, contoh "IBPPR/001/2026" -->
+                <label for="ibppr-noForm">No. Form <span class="req">*</span></label>
+                <input
+                  type="text"
+                  id="ibppr-noForm"
+                  placeholder="cth. IBPPR/001/2026"
+                  value=""
+                />
+              </div>
+              <div class="field" style="grid-column: 1/-1">
+                <!-- namaPekerjaan: nama/jenis pekerjaan yang diidentifikasi -->
+                <label for="ibppr-namaPekerjaan">Nama Pekerjaan <span class="req">*</span></label>
+                <input
+                  type="text"
+                  id="ibppr-namaPekerjaan"
+                  placeholder="Uraikan jenis pekerjaan"
+                  value=""
+                />
+              </div>
+              <div class="field" style="grid-column: 1/-1">
+                <!-- lokasi: lokasi pekerjaan di lapangan -->
+                <label for="ibppr-lokasi">Lokasi <span class="req">*</span></label>
+                <input
+                  type="text"
+                  id="ibppr-lokasi"
+                  placeholder="Nama lokasi / zona / lantai"
+                  value=""
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabel Baris Aktivitas IBPPR -->
+          <!-- Setiap baris → kolom B:K (sheet IBPPR), rows 9–18 -->
+          <!-- Field per baris: aktivitas, potensiBahaya, resikoAwal,
+           akibat, paparan, peluang, nilai (auto-hitung), tingkatResiko (auto),
+           pengendalian -->
+          <div class="card-title-row" style="margin: 0 0 8px">
+            <h3 style="font-size: 14px; font-weight: 800">
+              Daftar Aktivitas &amp; Bahaya
+            </h3>
+          </div>
+          <div id="ibppr-rows-container"></div>
+          <button
+            class="btn btn-primary btn-block"
+            onclick="ibppr.addRow()"
+            style="margin-bottom: 14px"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Tambah Baris
+          </button>
+
+          <!-- Tombol Aksi Utama -->
+          <div
+            class="fab-row"
+            style="margin-top: 20px; flex-wrap: wrap; gap: 8px"
+          >
+            <button
+              class="btn btn-ghost"
+              onclick="ibppr.reset()"
+              style="flex: 1; min-width: 100px"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <polyline points="1 4 1 10 7 10" />
+                <path d="M3.51 15a9 9 0 1 0 .49-3.51" />
+              </svg>
+              Reset Form
+            </button>
+            <button
+              class="btn btn-ghost"
+              onclick="ibppr.saveDraft()"
+              style="
+                flex: 1;
+                min-width: 100px;
+                color: var(--steel);
+                border-color: var(--steel);
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Simpan Draft
+            </button>
+            <button
+              class="btn btn-primary"
+              onclick="ibppr.generate()"
+              style="flex: 2; min-width: 140px"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+              Generate
+            </button>
+          </div>
+        </section>
+        <!-- /mod-ibppr -->
+
+        <!-- ===================================================================
+         MODUL 2: JSA
+         (Form Job Safety Analysis)
+         Berdiri sendiri, tidak terhubung ke IBPPR.
+         Field dipetakan ke kolom sheet "JSA" pada file Excel.
+         Saat disimpan, header JSA otomatis masuk ke JSA LOG.
+         =================================================================== -->
+        <section id="mod-jsa" class="module" role="tabpanel" aria-labelledby="tab-jsa" tabindex="0">
+          <div class="section-head">
+            <div class="eyebrow">Modul 2</div>
+            <h1>JSA</h1>
+            <p class="desc">
+              Job Safety Analysis - analisa keselamatan tiap urutan pekerjaan
+            </p>
+          </div>
+
+          <!-- Header Dokumen JSA -->
+          <!-- Field: noJSA → A4, tanggal → F4, jenisPekerjaan → A5,
+           pengawas → A6, namaPelaksana → E6 -->
+          <div class="card">
+            <div class="card-title-row">
+              <h3>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  style="width: 16px; height: 16px; stroke: var(--steel)"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                Header JSA
+              </h3>
+            </div>
+            <div class="field-grid cols-2">
+              <div class="field">
+                <!-- noJSA: nomor form JSA, masuk ke JSA LOG saat simpan -->
+                <label for="jsa-noJSA">No. JSA <span class="req">*</span></label>
+                <input
+                  type="text"
+                  id="jsa-noJSA"
+                  placeholder="FR/PK3/JSA/001-2026"
+                  value=""
+                />
+              </div>
+              <div class="field">
+                <!-- tanggal: tanggal pembuatan JSA -->
+                <label for="jsa-tanggal">Tanggal <span class="req">*</span></label>
+                <input type="date" id="jsa-tanggal" value="" />
+              </div>
+              <div class="field" style="grid-column: 1/-1">
+                <!-- jenisPekerjaan: jenis/nama pekerjaan JSA, masuk ke JSA LOG -->
+                <label for="jsa-jenisPekerjaan">Jenis Pekerjaan <span class="req">*</span></label>
+                <input
+                  type="text"
+                  id="jsa-jenisPekerjaan"
+                  placeholder="Uraikan jenis pekerjaan"
+                  value=""
+                />
+              </div>
+              <div class="field">
+                <!-- pengawas: nama pengawas lapangan -->
+                <label for="jsa-pengawas">Pengawas <span class="req">*</span></label>
+                <input
+                  type="text"
+                  id="jsa-pengawas"
+                  placeholder="Nama pengawas"
+                  value=""
+                />
+              </div>
+              <div class="field">
+                <!-- namaPelaksana: nama pelaksana / pekerja utama -->
+                <label for="jsa-namaPelaksana-display">Nama Pelaksana <span class="req">*</span></label>
+                <div
+                  id="jsa-namaPelaksana-display"
+                  onclick="pelaksanaDialog.open()"
+                  role="button"
+                  tabindex="0"
+                  aria-haspopup="dialog"
+                  aria-label="Nama Pelaksana. Klik untuk mengedit daftar nama pelaksana."
+                  style="
+                    width: 100%;
+                    min-height: 42px;
+                    padding: 10px 12px;
+                    border-radius: var(--r-sm) var(--r-sm) 0 0;
+                    border: 1.5px solid var(--line-strong);
+                    border-bottom: none;
+                    background: var(--paper-deep);
+                    font-family: var(--font-body);
+                    font-size: 13.5px;
+                    color: var(--ink);
+                    cursor: pointer;
+                    line-height: 1.6;
+                    word-break: break-word;
+                  "
+                  title="Klik untuk edit nama pelaksana"
+                >
+                  <span
+                    id="jsa-namaPelaksana-preview"
+                    style="color: var(--ink-faint)"
+                    >Belum ada nama pelaksana…</span
+                  >
+                </div>
+                <button
+                  onclick="pelaksanaDialog.open()"
+                  type="button"
+                  style="
+                    width: 100%;
+                    padding: 10px;
+                    border-radius: 0 0 var(--r-sm) var(--r-sm);
+                    border: 1.5px solid var(--amber);
+                    background: var(--amber-soft);
+                    color: var(--amber);
+                    font-family: var(--font-body);
+                    font-size: 13px;
+                    font-weight: 700;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                  "
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    style="width: 14px; height: 14px"
+                  >
+                    <path
+                      d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"
+                    />
+                  </svg>
+                  Edit Nama Pelaksana
+                </button>
+                <!-- hidden input tetap ada agar value bisa dibaca oleh JS yang sudah ada -->
+                <input type="hidden" id="jsa-namaPelaksana" value="" />
+              </div>
+            </div>
+          </div>
+
+          <!-- APD (Alat Pelindung Diri) -->
+          <!-- Field: apdList → rows A7:H15 (free text + checklist APD) -->
+          <div class="card">
+            <div class="card-title-row">
+              <h3>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  style="width: 16px; height: 16px; stroke: var(--amber)"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <polyline points="9 12 11 14 15 10" />
+                </svg>
+                APD yang Digunakan <span class="req">*</span>
+              </h3>
+            </div>
+            <!-- Checklist APD standar konstruksi -->
+            <div
+              id="jsa-apd-grid"
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 8px;
+                margin-bottom: 10px;
+              "
+            >
+              <!-- APD chips dirender oleh JS -->
+            </div>
+            <div class="field">
+              <!-- apdTambahan: APD lain yang tidak ada di daftar -->
+              <label>APD Lainnya</label>
+              <input
+                type="text"
+                id="jsa-apdTambahan"
+                placeholder="Misal: Safety harness full body"
+                value=""
+              />
+            </div>
+          </div>
+
+          <!-- Tabel Urutan Pekerjaan JSA -->
+          <!-- Setiap baris → rows 17-36 sheet JSA (tiap aktivitas 2 baris merging):
+           no (A), urutanPekerjaan (B), potensiBahaya (C:E), upayaPengendalian (F:H) -->
+          <div class="card-title-row" style="margin: 0 0 8px">
+            <h3 style="font-size: 14px; font-weight: 800">
+              Urutan Langkah Pekerjaan
+            </h3>
+          </div>
+          <div id="jsa-steps-container"></div>
+          <button
+            class="btn btn-primary btn-block"
+            onclick="jsa.addStep()"
+            style="margin-bottom: 14px"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Tambah Langkah
+          </button>
+
+          <!-- Lokasi dan Resiko (untuk JSA LOG) -->
+          <!-- Field: lokasi dan resiko dikirim ke JSA LOG -->
+          <div class="card" style="margin-top: 4px">
+            <div class="card-title-row">
+              <h3>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  style="width: 16px; height: 16px; stroke: var(--amber)"
+                >
+                  <circle cx="12" cy="10" r="3" />
+                  <path
+                    d="M12 2a8 8 0 0 0-8 8c0 5.25 8 13 8 13s8-7.75 8-13a8 8 0 0 0-8-8z"
+                  />
+                </svg>
+                Lokasi &amp; Resiko
+              </h3>
+            </div>
+            <div class="field-grid cols-2">
+              <div class="field" style="grid-column: 1/-1">
+                <!-- lokasi: lokasi pekerjaan, disimpan ke JSA LOG -->
+                <label for="jsa-lokasi">Lokasi Pekerjaan <span class="req">*</span></label>
+                <input
+                  type="text"
+                  id="jsa-lokasi"
+                  placeholder="Zona / area / lantai"
+                  value=""
+                />
+              </div>
+              <div class="field">
+                <!-- resiko: tingkat resiko keseluruhan JSA, masuk ke JSA LOG -->
+                <label for="jsa-resiko">Tingkat Resiko <span class="req">*</span></label>
+                <select id="jsa-resiko">
+                  <option value="">- Pilih -</option>
+                  <option value="Rendah">Rendah</option>
+                  <option value="Sedang">Sedang</option>
+                  <option value="Tinggi">Tinggi</option>
+                  <option value="Ekstrem">Ekstrem</option>
+                </select>
+              </div>
+              <div class="field">
+                <!-- penanggungjawab: nama PJ pekerjaan, disimpan ke JSA LOG -->
+                <label for="jsa-penanggungjawab">Penanggung Jawab <span class="req">*</span></label>
+                <input
+                  type="text"
+                  id="jsa-penanggungjawab"
+                  placeholder="Nama PJ"
+                  value=""
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Tombol Aksi JSA -->
+          <div
+            class="fab-row"
+            style="margin-top: 20px; flex-wrap: wrap; gap: 8px"
+          >
+            <button
+              class="btn btn-ghost"
+              onclick="jsa.reset()"
+              style="flex: 1; min-width: 100px"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <polyline points="1 4 1 10 7 10" />
+                <path d="M3.51 15a9 9 0 1 0 .49-3.51" />
+              </svg>
+              Reset
+            </button>
+            <button
+              class="btn btn-ghost"
+              onclick="jsa.saveDraft()"
+              style="
+                flex: 1;
+                min-width: 100px;
+                color: var(--steel);
+                border-color: var(--steel);
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Simpan Draft
+            </button>
+            <!-- generate JSA: konfirmasi update ke JSA LOG, tampilkan progres, download PDF -->
+            <button
+              class="btn btn-primary"
+              onclick="jsa.generate()"
+              style="flex: 2; min-width: 140px"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+              Generate
+            </button>
+          </div>
+        </section>
+        <!-- /mod-jsa -->
+
+        <!-- ===================================================================
+         MODUL 3: JSA LOG
+         Bukan form input - merupakan riwayat/arsip semua JSA yang pernah
+         disimpan. Data header JSA otomatis masuk ke sini saat JSA disimpan.
+         Field (sesuai sheet asli, tanpa kolom ID tersembunyi):
+                no (A), noFormJSA (B), tanggal (C), resiko (D),
+                jenisPekerjaan (E), lokasi (F), penanggungjawab (G)
+         =================================================================== -->
+        <section id="mod-log" class="module" role="tabpanel" aria-labelledby="tab-log" tabindex="0">
+          <div
+            class="section-head"
+            style="
+              display: flex;
+              align-items: flex-start;
+              justify-content: space-between;
+              gap: 10px;
+            "
+          >
+            <div>
+              <div class="eyebrow">Modul 3</div>
+              <h1>JSA LOG</h1>
+              <p class="desc">
+                Riwayat seluruh JSA yang pernah disimpan. Data selalu diambil
+                langsung dari Google Sheet.
+              </p>
+            </div>
+            <!-- [BARU] tombol Refresh: muat ulang data dari spreadsheet kapan saja -->
+            <button
+              class="btn btn-ghost btn-sm"
+              id="log-refresh-btn"
+              onclick="jsaLog.reload()"
+              title="Muat ulang dari spreadsheet"
+              style="flex-shrink: 0; margin-top: 2px"
+            >
+              <svg
+                id="log-refresh-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="width: 14px; height: 14px; stroke: currentColor"
+              >
+                <polyline points="23 4 23 10 17 10" />
+                <polyline points="1 20 1 14 7 14" />
+                <path
+                  d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
+                />
+              </svg>
+              Refresh
+            </button>
+          </div>
+
+          <!-- Bar Pencarian & Filter -->
+          <div class="card" style="padding: 12px 14px">
+            <div class="field" style="margin-bottom: 10px">
+              <label>Cari</label>
+              <div style="position: relative">
+                <svg
+                  style="
+                    position: absolute;
+                    left: 10px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    width: 15px;
+                    height: 15px;
+                    stroke: var(--ink-faint);
+                    fill: none;
+                    stroke-width: 2;
+                    stroke-linecap: round;
+                  "
+                  viewBox="0 0 24 24"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input
+                  type="text"
+                  id="log-search"
+                  placeholder="No. JSA, jenis pekerjaan, lokasi…"
+                  style="padding-left: 34px"
+                  oninput="jsaLog.filter()"
+                />
+              </div>
+            </div>
+            <div class="field-grid cols-2">
+              <div class="field">
+                <!-- filter tingkat resiko -->
+                <label>Filter Resiko</label>
+                <select id="log-filter-resiko" onchange="jsaLog.filter()">
+                  <option value="">Semua</option>
+                  <option value="Rendah">Rendah</option>
+                  <option value="Sedang">Sedang</option>
+                  <option value="Tinggi">Tinggi</option>
+                  <option value="Ekstrem">Ekstrem</option>
+                </select>
+              </div>
+              <div class="field">
+                <!-- filter tahun -->
+                <label>Filter Tahun</label>
+                <select id="log-filter-tahun" onchange="jsaLog.filter()">
+                  <option value="">Semua</option>
+                  <option value="2026">2026</option>
+                  <option value="2025">2025</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Statistik ringkas -->
+          <div
+            id="log-stats"
+            style="
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 8px;
+              margin-bottom: 14px;
+            "
+          ></div>
+
+          <!-- Cetak / unduh seluruh arsip JSA Log sebagai dokumen tabel resmi -->
+          <button
+            class="btn btn-primary btn-block"
+            onclick="jsaLog.generate()"
+            style="margin-bottom: 14px"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+            Generate Dokumen JSA Log
+          </button>
+
+          <!-- List kartu JSA LOG -->
+          <div id="log-list"></div>
+
+          <!-- Empty state -->
+          <div
+            id="log-empty"
+            style="
+              display: none;
+              text-align: center;
+              padding: 48px 24px;
+              color: var(--ink-faint);
+            "
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              style="
+                width: 48px;
+                height: 48px;
+                stroke: var(--line-strong);
+                margin-bottom: 12px;
+              "
+            >
+              <path
+                d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+              />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            <p
+              style="font-weight: 600; font-size: 14px; color: var(--ink-soft)"
+            >
+              Belum ada data JSA
+            </p>
+            <p style="font-size: 12.5px; margin-top: 4px">
+              Simpan form JSA terlebih dahulu
+            </p>
+          </div>
+        </section>
+        <!-- /mod-log -->
+      </main>
+      <!-- /view-area -->
+
+      <!-- TAB BAR NAVIGASI BAWAH -->
+      <nav class="tabbar" role="tablist" aria-label="Menu Modul SiKerja">
+        <button
+          class="tab-btn is-active"
+          onclick="switchTab('ibppr')"
+          id="tab-ibppr"
+          role="tab"
+          aria-selected="true"
+          aria-controls="mod-ibppr"
+        >
+          <div class="tab-ic">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M9 11l3 3L22 4" />
+              <path
+                d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
+              />
+            </svg>
+          </div>
+          <span class="tab-label">IBPPR</span>
+        </button>
+        <button
+          class="tab-btn"
+          onclick="switchTab('jsa')"
+          id="tab-jsa"
+          role="tab"
+          aria-selected="false"
+          aria-controls="mod-jsa"
+        >
+          <div class="tab-ic">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </div>
+          <span class="tab-label">JSA</span>
+        </button>
+        <button
+          class="tab-btn"
+          onclick="switchTab('log')"
+          id="tab-log"
+          role="tab"
+          aria-selected="false"
+          aria-controls="mod-log"
+        >
+          <div class="tab-ic">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
+            </svg>
+          </div>
+          <span class="tab-label">JSA Log</span>
+        </button>
+      </nav>
+    </div>
+    <!-- /app-shell -->
+
+    <!-- TOAST NOTIFIKASI -->
+    <div class="toast" id="app-toast">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke-width="2"
+        stroke-linecap="round"
+      >
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+      <span id="app-toast-msg">Tersimpan</span>
+    </div>
+
+    <!-- MODAL DETAIL JSA LOG -->
+    <div
+      id="log-modal-overlay"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(28, 34, 39, 0.55);
+        backdrop-filter: blur(3px);
+        z-index: 80;
+        align-items: flex-end;
+        justify-content: center;
+      "
+      onclick="jsaLog.closeDetail(event)"
+    >
+      <div
+        id="log-modal-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="log-modal-title"
+        tabindex="-1"
+        style="
+          background: var(--card);
+          border-radius: var(--r-lg) var(--r-lg) 0 0;
+          width: 100%;
+          max-width: 720px;
+          max-height: 85vh;
+          overflow-y: auto;
+          padding: 20px 18px calc(24px + var(--safe-bottom));
+        "
+      >
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+          "
+        >
+          <h3
+            id="log-modal-title"
+            style="font-size: 16px; font-weight: 800; color: var(--ink)"
+          >
+            Detail JSA
+          </h3>
+          <button
+            onclick="jsaLog.closeDetail()"
+            aria-label="Tutup detail JSA"
+            style="
+              background: var(--paper-deep);
+              border: none;
+              border-radius: 8px;
+              padding: 6px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+            "
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="var(--ink-soft)"
+              stroke-width="2"
+              stroke-linecap="round"
+              style="width: 18px; height: 18px"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div id="log-modal-body"></div>
+        <button
+          id="log-delete-btn"
+          onclick="jsaLog.deleteCurrent()"
+          style="
+            margin-top: 18px;
+            width: 100%;
+            background: var(--risk-high-bg, #fde8e6);
+            color: var(--risk-high, #c0392b);
+            border: none;
+            border-radius: var(--r-md);
+            padding: 12px;
+            font-size: 13.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+          "
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="width: 16px; height: 16px"
+          >
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M10 11v6" />
+            <path d="M14 11v6" />
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+          </svg>
+          Hapus Log Ini
+        </button>
+      </div>
+    </div>
+
+    <!-- MODAL KONFIRMASI (REUSABLE) -->
+    <div
+      id="confirm-overlay"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 28, 46, 0.55);
+        backdrop-filter: blur(4px);
+        z-index: 90;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      "
+    >
+      <div
+        id="confirm-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+        aria-describedby="confirm-msg"
+        tabindex="-1"
+        style="
+          background: #fff;
+          border-radius: var(--r-lg);
+          width: 100%;
+          max-width: 360px;
+          box-shadow: 0 20px 60px -10px rgba(15, 28, 46, 0.35);
+          overflow: hidden;
+          transform: scale(0.95);
+          opacity: 0;
+          transition:
+            transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+            opacity 0.18s ease;
+        "
+      >
+        <div
+          id="confirm-accent"
+          style="height: 4px; background: var(--risk-extreme)"
+        ></div>
+        <div style="padding: 22px 20px 20px">
+          <div
+            style="
+              display: flex;
+              align-items: flex-start;
+              gap: 14px;
+              margin-bottom: 14px;
+            "
+          >
+            <div
+              style="
+                width: 42px;
+                height: 42px;
+                border-radius: 12px;
+                background: var(--risk-extreme-bg);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+              "
+            >
+              <svg
+                id="confirm-icon-svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--risk-extreme)"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="width: 20px; height: 20px"
+              >
+                <polyline points="1 4 1 10 7 10" />
+                <path d="M3.51 15a9 9 0 1 0 .49-3.51" />
+              </svg>
+            </div>
+            <div>
+              <div
+                id="confirm-title"
+                style="
+                  font-family: var(--font-head);
+                  font-size: 15px;
+                  font-weight: 800;
+                  color: var(--ink);
+                  margin-bottom: 4px;
+                "
+              >
+                Reset Form
+              </div>
+              <div
+                id="confirm-msg"
+                style="
+                  font-size: 13px;
+                  color: var(--ink-soft);
+                  line-height: 1.5;
+                "
+              >
+                Semua isian akan dihapus dan tidak dapat dikembalikan.
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 6px">
+            <button
+              id="confirm-cancel-btn"
+              onclick="confirmDialog.cancel()"
+              style="
+                flex: 1;
+                padding: 11px;
+                border-radius: var(--r-sm);
+                border: 1.5px solid var(--line-strong);
+                background: #fff;
+                font-family: var(--font-body);
+                font-size: 13.5px;
+                font-weight: 700;
+                color: var(--ink-soft);
+                cursor: pointer;
+              "
+            >
+              Batal
+            </button>
+            <button
+              id="confirm-ok-btn"
+              onclick="confirmDialog.ok()"
+              style="
+                flex: 1;
+                padding: 11px;
+                border-radius: var(--r-sm);
+                border: none;
+                background: var(--risk-extreme);
+                font-family: var(--font-body);
+                font-size: 13.5px;
+                font-weight: 700;
+                color: #fff;
+                cursor: pointer;
+              "
+            >
+              Ya, Reset
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL KONFIRMASI UPDATE JSA LOG (saat Generate JSA) -->
+    <div
+      id="jsa-log-confirm-overlay"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 28, 46, 0.55);
+        backdrop-filter: blur(4px);
+        z-index: 91;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      "
+    >
+      <div
+        id="jsa-log-confirm-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="jsa-log-confirm-title"
+        aria-describedby="jsa-log-confirm-msg"
+        tabindex="-1"
+        style="
+          background: #fff;
+          border-radius: var(--r-lg);
+          width: 100%;
+          max-width: 360px;
+          box-shadow: 0 20px 60px -10px rgba(15, 28, 46, 0.35);
+          overflow: hidden;
+          transform: scale(0.95);
+          opacity: 0;
+          transition:
+            transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+            opacity 0.18s ease;
+        "
+      >
+        <div style="height: 4px; background: var(--steel)"></div>
+        <div style="padding: 22px 20px 20px">
+          <div
+            style="
+              display: flex;
+              align-items: flex-start;
+              gap: 14px;
+              margin-bottom: 14px;
+            "
+          >
+            <div
+              style="
+                width: 42px;
+                height: 42px;
+                border-radius: 12px;
+                background: var(--steel-soft);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--steel)"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                style="width: 20px; height: 20px"
+              >
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+            </div>
+            <div>
+              <div
+                id="jsa-log-confirm-title"
+                style="
+                  font-family: var(--font-head);
+                  font-size: 15px;
+                  font-weight: 800;
+                  color: var(--ink);
+                  margin-bottom: 4px;
+                "
+              >
+                Update ke JSA Log?
+              </div>
+              <div
+                id="jsa-log-confirm-msg"
+                style="
+                  font-size: 13px;
+                  color: var(--ink-soft);
+                  line-height: 1.5;
+                "
+              >
+                Apakah data JSA ini juga ingin disimpan ke JSA Log sebagai
+                arsip?
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 6px">
+            <button
+              onclick="jsaLogConfirm.skip()"
+              style="
+                flex: 1;
+                padding: 11px;
+                border-radius: var(--r-sm);
+                border: 1.5px solid var(--line-strong);
+                background: #fff;
+                font-family: var(--font-body);
+                font-size: 13px;
+                font-weight: 700;
+                color: var(--ink-soft);
+                cursor: pointer;
+              "
+            >
+              Tidak, Skip
+            </button>
+            <button
+              onclick="jsaLogConfirm.yes()"
+              style="
+                flex: 1;
+                padding: 11px;
+                border-radius: var(--r-sm);
+                border: none;
+                background: var(--steel);
+                font-family: var(--font-body);
+                font-size: 13px;
+                font-weight: 700;
+                color: #fff;
+                cursor: pointer;
+              "
+            >
+              Ya, Update
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL GENERATE PROGRESS -->
+    <div
+      id="generate-overlay"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 28, 46, 0.6);
+        backdrop-filter: blur(5px);
+        z-index: 95;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      "
+    >
+      <div
+        id="generate-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="gen-title"
+        aria-describedby="gen-subtitle"
+        tabindex="-1"
+        style="
+          background: #fff;
+          border-radius: var(--r-lg);
+          width: 100%;
+          max-width: 380px;
+          box-shadow: 0 24px 64px -12px rgba(15, 28, 46, 0.4);
+          overflow: hidden;
+          transform: scale(0.92);
+          opacity: 0;
+          transition:
+            transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+            opacity 0.2s ease;
+        "
+      >
+        <div
+          id="generate-accent-bar"
+          style="
+            height: 4px;
+            background: linear-gradient(90deg, var(--amber), var(--steel));
+          "
+        ></div>
+        <div style="padding: 24px 22px 22px">
+          <!-- Header -->
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 14px;
+              margin-bottom: 20px;
+            "
+          >
+            <div
+              id="gen-icon-wrap"
+              style="
+                width: 46px;
+                height: 46px;
+                border-radius: 14px;
+                background: var(--amber-soft);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+              "
+            >
+              <svg
+                id="gen-icon-bolt"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--amber)"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                style="width: 22px; height: 22px"
+              >
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+              </svg>
+              <svg
+                id="gen-icon-check"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--risk-low)"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                style="width: 22px; height: 22px; display: none"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <div>
+              <div
+                id="gen-title"
+                style="
+                  font-family: var(--font-head);
+                  font-size: 16px;
+                  font-weight: 800;
+                  color: var(--ink);
+                "
+              >
+                Generating…
+              </div>
+              <div
+                id="gen-subtitle"
+                style="
+                  font-size: 12.5px;
+                  color: var(--ink-faint);
+                  margin-top: 2px;
+                "
+              >
+                Menyiapkan dokumen PDF
+              </div>
+            </div>
+          </div>
+          <!-- Progress bar -->
+          <div id="gen-progress-wrap" style="margin-bottom: 16px">
+            <div
+              style="
+                background: var(--paper-deep);
+                border-radius: 999px;
+                height: 8px;
+                overflow: hidden;
+              "
+            >
+              <div
+                id="gen-progress-bar"
+                style="
+                  height: 100%;
+                  width: 0%;
+                  background: linear-gradient(
+                    90deg,
+                    var(--amber),
+                    var(--amber-glow)
+                  );
+                  border-radius: 999px;
+                  transition: width 0.4s ease;
+                "
+              ></div>
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-top: 6px;
+                gap: 10px;
+              "
+            >
+              <span
+                id="gen-step-label"
+                style="
+                  font-size: 11.5px;
+                  color: var(--ink-soft);
+                  font-weight: 500;
+                  transition: opacity 0.18s ease;
+                  white-space: nowrap;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  flex: 1;
+                "
+                >Validasi data…</span
+              >
+              <span
+                id="gen-pct"
+                style="
+                  font-family: var(--font-mono);
+                  font-size: 11.5px;
+                  color: var(--ink-faint);
+                  font-weight: 600;
+                  flex-shrink: 0;
+                "
+                >0%</span
+              >
+            </div>
+          </div>
+          <!-- Pratinjau dokumen hasil - iframe menampilkan tabel resmi yang sudah terisi data -->
+          <div id="gen-preview-wrap" style="display: none; margin-bottom: 16px">
+            <div
+              style="
+                font-size: 11.5px;
+                font-weight: 700;
+                color: var(--ink-soft);
+                margin-bottom: 6px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                style="width: 13px; height: 13px"
+              >
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+              Pratinjau Dokumen
+            </div>
+            <iframe
+              id="gen-preview-frame"
+              title="Pratinjau dokumen"
+              style="
+                width: 100%;
+                height: 260px;
+                border: 1px solid var(--line-strong);
+                border-radius: var(--r-sm);
+                background: #fff;
+              "
+            ></iframe>
+          </div>
+          <!-- Tombol setelah dokumen siap -->
+          <div id="gen-done-actions" style="display: none; gap: 8px">
+            <button
+              id="gen-btn-pdf"
+              onclick="generateModal.downloadPDF()"
+              style="
+                width: 100%;
+                padding: 13px;
+                border-radius: var(--r-md);
+                border: none;
+                background: linear-gradient(
+                  135deg,
+                  var(--amber),
+                  var(--amber-glow)
+                );
+                color: #fff;
+                font-family: var(--font-body);
+                font-size: 14px;
+                font-weight: 700;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                box-shadow: 0 4px 14px -4px rgba(26, 115, 232, 0.5);
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#fff"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                style="width: 18px; height: 18px"
+              >
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span id="gen-btn-pdf-label">Download PDF</span>
+            </button>
+            <button
+              onclick="generateModal.close()"
+              style="
+                width: 100%;
+                margin-top: 8px;
+                padding: 11px;
+                border-radius: var(--r-md);
+                border: 1.5px solid var(--line-strong);
+                background: #fff;
+                font-family: var(--font-body);
+                font-size: 13.5px;
+                font-weight: 700;
+                color: var(--ink-soft);
+                cursor: pointer;
+              "
+            >
+              Tutup
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL EDIT INFO DOKUMEN (No. Dok / No. Rev / Tgl Terbit) -->
+    <div
+      id="docmeta-overlay"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 28, 46, 0.55);
+        backdrop-filter: blur(4px);
+        z-index: 92;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      "
+    >
+      <div
+        id="docmeta-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="docmeta-title"
+        aria-describedby="docmeta-subtitle"
+        tabindex="-1"
+        style="
+          background: #fff;
+          border-radius: var(--r-lg);
+          width: 100%;
+          max-width: 360px;
+          box-shadow: 0 20px 60px -10px rgba(15, 28, 46, 0.35);
+          overflow: hidden;
+          transform: scale(0.95);
+          opacity: 0;
+          transition:
+            transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+            opacity 0.18s ease;
+        "
+      >
+        <div
+          style="
+            height: 4px;
+            background: linear-gradient(90deg, var(--amber), var(--steel));
+          "
+        ></div>
+        <div style="padding: 22px 20px 20px">
+          <div
+            style="
+              display: flex;
+              align-items: flex-start;
+              gap: 14px;
+              margin-bottom: 16px;
+            "
+          >
+            <div
+              style="
+                width: 42px;
+                height: 42px;
+                border-radius: 12px;
+                background: var(--amber-soft);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--amber)"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="width: 20px; height: 20px"
+              >
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="8" y1="9" x2="16" y2="9" />
+                <line x1="8" y1="13" x2="14" y2="13" />
+              </svg>
+            </div>
+            <div>
+              <div
+                id="docmeta-title"
+                style="
+                  font-family: var(--font-head);
+                  font-size: 15px;
+                  font-weight: 800;
+                  color: var(--ink);
+                  margin-bottom: 4px;
+                "
+              >
+                Info Dokumen
+              </div>
+              <div
+                id="docmeta-subtitle"
+                style="
+                  font-size: 12.5px;
+                  color: var(--ink-soft);
+                  line-height: 1.5;
+                "
+              >
+                Berlaku untuk semua PDF (IBPPR, JSA, JSA Log)
+              </div>
+            </div>
+          </div>
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+              margin-bottom: 6px;
+            "
+          >
+            <div class="field">
+              <label>No. Dok</label>
+              <input
+                type="text"
+                id="docmeta-noDok"
+                placeholder="cth. FR/PK3/JSA/002"
+              />
+            </div>
+            <div class="field">
+              <label>No. Rev</label>
+              <input type="text" id="docmeta-noRev" placeholder="cth. 0" />
+            </div>
+            <div class="field">
+              <label>Tgl Terbit</label>
+              <input
+                type="text"
+                id="docmeta-tglTerbit"
+                placeholder="cth. 10 MEI 2022"
+              />
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 14px">
+            <button
+              onclick="docMetaDialog.cancel()"
+              style="
+                flex: 1;
+                padding: 11px;
+                border-radius: var(--r-sm);
+                border: 1.5px solid var(--line-strong);
+                background: #fff;
+                font-family: var(--font-body);
+                font-size: 13.5px;
+                font-weight: 700;
+                color: var(--ink-soft);
+                cursor: pointer;
+              "
+            >
+              Batal
+            </button>
+            <button
+              onclick="docMetaDialog.save()"
+              style="
+                flex: 1;
+                padding: 11px;
+                border-radius: var(--r-sm);
+                border: none;
+                background: var(--amber);
+                font-family: var(--font-body);
+                font-size: 13.5px;
+                font-weight: 700;
+                color: #fff;
+                cursor: pointer;
+              "
+            >
+              Simpan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL NAMA PELAKSANA -->
+    <div
+      id="pelaksana-overlay"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 28, 46, 0.55);
+        backdrop-filter: blur(4px);
+        z-index: 93;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      "
+      onclick="pelaksanaDialog.onOverlayClick(event)"
+    >
+      <div
+        id="pelaksana-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pelaksana-title"
+        aria-describedby="pelaksana-subtitle"
+        tabindex="-1"
+        style="
+          background: #fff;
+          border-radius: var(--r-lg);
+          width: 100%;
+          max-width: 400px;
+          box-shadow: 0 20px 60px -10px rgba(15, 28, 46, 0.35);
+          overflow: hidden;
+          transform: scale(0.95);
+          opacity: 0;
+          transition:
+            transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+            opacity 0.18s ease;
+        "
+      >
+        <div
+          style="
+            height: 4px;
+            background: linear-gradient(90deg, var(--amber), var(--steel));
+          "
+        ></div>
+        <div style="padding: 22px 20px 20px">
+          <div
+            style="
+              display: flex;
+              align-items: flex-start;
+              gap: 14px;
+              margin-bottom: 16px;
+            "
+          >
+            <div
+              style="
+                width: 42px;
+                height: 42px;
+                border-radius: 12px;
+                background: var(--amber-soft);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="var(--amber)"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                style="width: 20px; height: 20px"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </div>
+            <div>
+              <div
+                id="pelaksana-title"
+                style="
+                  font-family: var(--font-head);
+                  font-size: 15px;
+                  font-weight: 800;
+                  color: var(--ink);
+                  margin-bottom: 4px;
+                "
+              >
+                Nama Pelaksana
+              </div>
+              <div
+                id="pelaksana-subtitle"
+                style="
+                  font-size: 12.5px;
+                  color: var(--ink-soft);
+                  line-height: 1.5;
+                "
+              >
+                Isi satu nama per baris. Tekan Enter untuk tambah baris baru.
+              </div>
+            </div>
+            <button
+              onclick="pelaksanaDialog.close()"
+              type="button"
+              aria-label="Tutup dialog nama pelaksana"
+              style="
+                margin-left: auto;
+                flex-shrink: 0;
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                border: none;
+                background: var(--paper-deep);
+                color: var(--ink-soft);
+                font-size: 18px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                line-height: 1;
+              "
+            >
+              &times;
+            </button>
+          </div>
+
+          <!-- 7 textbox -->
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+              margin-bottom: 6px;
+            "
+            id="pelaksana-inputs"
+          >
+            <!-- dirender oleh JS -->
+          </div>
+
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              margin-top: 4px;
+              margin-bottom: 14px;
+            "
+          >
+            <button
+              onclick="pelaksanaDialog.addRow()"
+              type="button"
+              style="
+                padding: 6px 14px;
+                border-radius: var(--r-sm);
+                border: 1.5px dashed var(--line-strong);
+                background: transparent;
+                font-family: var(--font-body);
+                font-size: 12.5px;
+                font-weight: 600;
+                color: var(--ink-soft);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+              "
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                style="width: 13px; height: 13px"
+              >
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Tambah baris
+            </button>
+            <div
+              id="pelaksana-counter"
+              style="font-size: 12px; color: var(--ink-faint)"
+            >
+              0 orang
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px">
+            <button
+              onclick="pelaksanaDialog.close()"
+              type="button"
+              style="
+                flex: 1;
+                padding: 11px;
+                border-radius: var(--r-sm);
+                border: 1.5px solid var(--line-strong);
+                background: #fff;
+                font-family: var(--font-body);
+                font-size: 13.5px;
+                font-weight: 700;
+                color: var(--ink-soft);
+                cursor: pointer;
+              "
+            >
+              Batal
+            </button>
+            <button
+              onclick="pelaksanaDialog.save()"
+              type="button"
+              style="
+                flex: 1;
+                padding: 11px;
+                border-radius: var(--r-sm);
+                border: none;
+                background: var(--amber);
+                font-family: var(--font-body);
+                font-size: 13.5px;
+                font-weight: 700;
+                color: #fff;
+                cursor: pointer;
+              "
+            >
+              Simpan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL DETAIL SINKRONISASI & ANTRIAN OFFLINE -->
+    <div
+      id="sync-modal-overlay"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 28, 46, 0.55);
+        backdrop-filter: blur(4px);
+        z-index: 94;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      "
+      onclick="syncManager.onOverlayClick(event)"
+    >
+      <div
+        id="sync-modal-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sync-modal-title"
+        aria-describedby="sync-modal-desc"
+        tabindex="-1"
+        style="
+          background: #fff;
+          border-radius: var(--r-lg);
+          width: 100%;
+          max-width: 420px;
+          box-shadow: 0 20px 60px -10px rgba(15, 28, 46, 0.35);
+          overflow: hidden;
+          transform: scale(0.95);
+          opacity: 0;
+          transition:
+            transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+            opacity 0.18s ease;
+        "
+      >
+        <div style="height: 4px; background: var(--amber)"></div>
+        <div style="padding: 22px 20px 20px">
+          <!-- Header -->
+          <div style="display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px;">
+            <div style="width: 42px; height: 42px; border-radius: 12px; background: var(--amber-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width: 20px; height: 20px;">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+              </svg>
+            </div>
+            <div style="flex: 1;">
+              <div id="sync-modal-title" style="font-family: var(--font-head); font-size: 15px; font-weight: 800; color: var(--ink); margin-bottom: 4px;">
+                Status Sinkronisasi & Antrean
+              </div>
+              <div id="sync-modal-desc" style="font-size: 12.5px; color: var(--ink-soft); line-height: 1.5;">
+                Kelola data JSA yang tertunda karena koneksi offline.
+              </div>
+            </div>
+            <button
+              onclick="syncManager.closeSyncModal()"
+              type="button"
+              aria-label="Tutup dialog status sinkronisasi"
+              style="
+                flex-shrink: 0;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                border: none;
+                background: var(--paper-deep);
+                color: var(--ink-soft);
+                font-size: 16px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                line-height: 1;
+              "
+            >
+              &times;
+            </button>
+          </div>
+
+          <!-- Status List -->
+          <div style="background: var(--paper-deep); border-radius: var(--r-sm); padding: 12px; margin-bottom: 16px; border: 1px solid var(--line);">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+              <span style="color: var(--ink-soft); font-weight: 500;">Status Internet:</span>
+              <span id="sync-modal-net-status" style="font-weight: 700; color: var(--risk-low);">Online</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 13px;">
+              <span style="color: var(--ink-soft); font-weight: 500;">Antrean Tertunda:</span>
+              <span id="sync-modal-queue-count" style="font-weight: 700; color: var(--ink);">0 data</span>
+            </div>
+          </div>
+
+          <!-- Queue Items list -->
+          <div style="max-height: 160px; overflow-y: auto; margin-bottom: 16px; border: 1.5px solid var(--line); border-radius: var(--r-sm); display: none;" id="sync-modal-list-wrapper">
+            <div id="sync-modal-list" style="padding: 4px 0;"></div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <button
+              id="sync-modal-action-btn"
+              onclick="syncManager.triggerSyncFromModal()"
+              style="
+                width: 100%;
+                padding: 12px;
+                border-radius: var(--r-sm);
+                border: none;
+                background: var(--amber);
+                font-family: var(--font-body);
+                font-size: 13.5px;
+                font-weight: 700;
+                color: #fff;
+                cursor: pointer;
+                transition: background 0.15s;
+              "
+            >
+              Coba Sinkronkan Sekarang
+            </button>
+            <button
+              id="sync-modal-download-btn"
+              onclick="syncManager.downloadQueueBackup()"
+              style="
+                width: 100%;
+                padding: 11px;
+                border-radius: var(--r-sm);
+                border: 1.5px solid var(--line-strong);
+                background: #fff;
+                font-family: var(--font-body);
+                font-size: 13px;
+                font-weight: 700;
+                color: var(--ink-soft);
+                cursor: pointer;
+              "
+            >
+              Unduh Cadangan Antrean (JSON)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INPUT TERSEMBUNYI UNTUK UPLOAD DRAFT JSON -->
+    <input
+      type="file"
+      id="draft-file-input"
+      accept=".json"
+      style="display: none"
+      onchange="loadDraftFile(event)"
+    />
+
+    <!-- =========================================================================
+     JAVASCRIPT - semua logic dalam satu blok script
+     Struktur:
+       1. switchTab()        – navigasi antar modul
+       2. showToast()        – notifikasi singkat
+       3. ibppr.*            – state + logic modul IBPPR
+       4. jsa.*              – state + logic modul JSA (termasuk APD checklist)
+       5. jsaLog.*           – state + logic modul JSA LOG
+       6. init()             – inisialisasi semua modul saat halaman dimuat
+
+     Catatan integrasi Google Apps Script:
+       - Fungsi submitToAppsScript(url, payload) siap menggantikan
+         simulasi simpan; tinggal isi GAS_URL dengan URL doPost() Apps Script.
+       - Semua id field mengikuti konvensi: "modul-namaField"
+         (misal "ibppr-noForm", "jsa-tanggal") agar mudah dipetakan.
+     ========================================================================= -->
+    <script src="js/exporters.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/sync.js"></script>
+    <script src="js/ibppr.js"></script>
+    <script src="js/jsa.js"></script>
+    <script src="js/jsa-log.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>
