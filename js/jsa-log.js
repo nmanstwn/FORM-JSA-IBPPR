@@ -339,7 +339,7 @@
             }
 
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({
+            const doc = new jsPDF({ compress: true,
               orientation: "portrait",
               unit: "mm",
               format: "a4",
@@ -376,7 +376,7 @@
 
             function toB64(i) {
   const c = document.createElement("canvas");
-  const maxDim = 200; // Resize to 200px max
+  const maxDim = 500; // Resize to 200px max
   let w = i.width;
   let h = i.height;
   if (w > maxDim || h > maxDim) {

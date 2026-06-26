@@ -399,7 +399,7 @@
     img.onload = function () {
       try {
         const canvas = document.createElement("canvas");
-        const maxDim = 200; // Capping logo resolution to 200px max (saves huge PDF space while maintaining crisp look)
+        const maxDim = 500; // Capping logo resolution to 200px max (saves huge PDF space while maintaining crisp look)
         let w = img.width;
         let h = img.height;
         if (w > maxDim || h > maxDim) {
@@ -430,7 +430,7 @@
 // Generator PDF Vektor JSA
       async function exportJSAPDF(payload, filename) {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({
+        const doc = new jsPDF({ compress: true,
           orientation: "portrait",
           unit: "mm",
           format: "a4",
@@ -664,7 +664,7 @@
       // Generator PDF Vektor IBPPR
       async function exportIBPPRPDF(payload, filename) {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({
+        const doc = new jsPDF({ compress: true,
           orientation: "landscape",
           unit: "mm",
           format: "a4",
